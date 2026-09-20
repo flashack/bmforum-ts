@@ -1,5 +1,20 @@
 # 项目上下文
 
+## 项目概览
+
+BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功能实现）。
+核心模块与关键文件：
+
+- **BMBCode 渲染**：`src/lib/bmbcode.ts` —— parseBmbCode(content, attachMap, tradeCtx?)；交易标签 [sell=金额]/[gift=金额]/[beg] 需要 TradeCtx（帖子买卖家、beg 流水、金钱单位）才能渲染遮罩/按钮；表情 [s:xxx] 走 EMOTICONS
+- **交易（原版 sell.php）**：API `src/app/api/posts/[id]/trade/route.ts`，action=buy/refund/gift/beg；钱流：购买扣买家给作者、退款全额退买家、礼金由主题作者发给回复作者（每作者一次）、求赏捐给帖子作者；流水表 beg（id = 帖子id+"1"/"3"、主题id+"2"），posts.sellbuyer 存买家 userid 逗号列表
+- **帖子编辑（原版 post.php modify）**：API `src/app/api/posts/[id]/edit`，页面 `/post?edit=帖子id`（首帖可改标题/主题简介 newdesc/标签，同步 thread_tags 计数）
+- **主题简介**：threads.newdesc，发帖/编辑表单字段，版块主题列表标题下显示
+- **举报（原版 report.php）**：API `src/app/api/report`，PM 通知版主/管理员 + forumlog
+- **验证码（原版 authimg.php）**：`src/lib/captcha.ts`（无状态 HMAC token，SECRET=BMF_CAPTCHA_SECRET||DATABASE_URL），GET /api/captcha，注册接口强制校验
+- **后台管理** `/admin`：版块/公告/用户/用户组/回收站/敏感词/IP封禁/邀请/站点设置(bbs_config)/禁注名单(banname)/附件管理/日志(adminlog+forumlog)/缓存重建；面板组件在 `src/components/bmf/admin-panels.tsx`（客户端统一 POST {action,...}，路由需同时支持 POST action 分支）
+- **站点设置**：bbs_config 表（bbs_title/bbs_des/welcomemess/closereg/moneyunit/perpage）；layout 读 bbs_title，主题页读 perpage，注册读 closereg，交易渲染读 moneyunit
+- **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`；结构 `db/schema.sql`（生产首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后需重新 pg_dump 导出）；生产环境由 `scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底）
+
 ### 版本技术栈
 
 - **Framework**: Next.js 16 (App Router)

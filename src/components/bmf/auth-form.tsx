@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -11,8 +11,29 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [password, setPassword] = useState("");
   const [mailadd, setMailadd] = useState("");
   const [invitecode, setInvitecode] = useState("");
+  const [captcha, setCaptcha] = useState("");
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaSvg, setCaptchaSvg] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const loadCaptcha = useCallback(async () => {
+    setCaptcha("");
+    try {
+      const res = await fetch("/api/captcha");
+      const data = (await res.json()) as { ok: boolean; token?: string; svg?: string };
+      if (data.ok && data.token && data.svg) {
+        setCaptchaToken(data.token);
+        setCaptchaSvg(data.svg);
+      }
+    } catch {
+      setCaptchaSvg("");
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isLogin) void loadCaptcha();
+  }, [isLogin, loadCaptcha]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -22,11 +43,16 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       const res = await fetch(`/api/auth/${isLogin ? "login" : "register"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isLogin ? { username, password } : { username, password, mailadd, invitecode }),
+        body: JSON.stringify(
+          isLogin
+            ? { username, password }
+            : { username, password, mailadd, invitecode, captcha, captchaToken }
+        ),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
         setMsg(data.error || "操作失败");
+        if (!isLogin) void loadCaptcha();
         return;
       }
       router.push("/");
@@ -83,6 +109,31 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                 placeholder="形如 BMF-XXXXXX"
                 maxLength={32}
               />
+            </div>
+          )}
+          {!isLogin && (
+            <div>
+              <label className="bmf-label">验证码（不区分大小写）</label>
+              <div className="flex items-center gap-2">
+                <input
+                  className="bmf-input !w-32"
+                  value={captcha}
+                  onChange={(e) => setCaptcha(e.target.value)}
+                  maxLength={8}
+                  autoComplete="off"
+                />
+                {captchaSvg ? (
+                  <button
+                    type="button"
+                    className="flex-shrink-0 border border-[#dddddd] leading-none"
+                    onClick={() => void loadCaptcha()}
+                    title="看不清？点击换一张"
+                    dangerouslySetInnerHTML={{ __html: captchaSvg }}
+                  />
+                ) : (
+                  <span className="text-xs text-[#999]">验证码加载中...</span>
+                )}
+              </div>
             </div>
           )}
           {msg && <div className="text-xs text-[#cc3311]">{msg}</div>}

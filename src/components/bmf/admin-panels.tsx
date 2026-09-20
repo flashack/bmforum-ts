@@ -713,3 +713,199 @@ export function RebuildButton() {
     </div>
   );
 }
+
+/* ============ 站点设置（原版 setoptions） ============ */
+export function OptionsAdmin({ values }: { values: Record<string, string> }) {
+  const router = useRouter();
+  const [bbsTitle, setBbsTitle] = useState(values.bbs_title ?? "");
+  const [bbsDes, setBbsDes] = useState(values.bbs_des ?? "");
+  const [welcome, setWelcome] = useState(values.welcomemess ?? "");
+  const [closereg, setClosereg] = useState(values.closereg === "1");
+  const [moneyunit, setMoneyunit] = useState(values.moneyunit ?? "金钱");
+  const [perpage, setPerpage] = useState(values.perpage ?? "10");
+  const [msg, setMsg] = useState("");
+
+  async function save() {
+    setMsg("");
+    const r = await post("/api/admin/options", {
+      bbs_title: bbsTitle,
+      bbs_des: bbsDes,
+      welcomemess: welcome,
+      closereg: closereg ? "1" : "0",
+      moneyunit,
+      perpage,
+    });
+    if (!r.ok) return setMsg(r.error || "保存失败");
+    setMsg("站点设置已保存。");
+    router.refresh();
+  }
+
+  return (
+    <div className="bmf-row grid max-w-xl gap-3">
+      {msg && <div className="text-xs text-[#0a7d32]">{msg}</div>}
+      <div>
+        <label className="bmf-label">站点名称（导航栏与页面标题）</label>
+        <input className="bmf-input" value={bbsTitle} onChange={(e) => setBbsTitle(e.target.value)} maxLength={40} />
+      </div>
+      <div>
+        <label className="bmf-label">站点描述</label>
+        <input className="bmf-input" value={bbsDes} onChange={(e) => setBbsDes(e.target.value)} maxLength={100} />
+      </div>
+      <div>
+        <label className="bmf-label">导航栏欢迎语</label>
+        <input
+          className="bmf-input"
+          value={welcome}
+          onChange={(e) => setWelcome(e.target.value)}
+          maxLength={80}
+          placeholder="如：注册会员即可发帖交流，欢迎光临！"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <input id="opt-closereg" type="checkbox" checked={closereg} onChange={(e) => setClosereg(e.target.checked)} />
+        <label htmlFor="opt-closereg" className="text-[13px]">
+          关闭注册（新用户暂时无法注册）
+        </label>
+      </div>
+      <div>
+        <label className="bmf-label">金钱单位名称（出售/礼金/求赏显示用）</label>
+        <input className="bmf-input !w-40" value={moneyunit} onChange={(e) => setMoneyunit(e.target.value)} maxLength={10} />
+      </div>
+      <div>
+        <label className="bmf-label">主题页每页回复数</label>
+        <input
+          className="bmf-input !w-24"
+          value={perpage}
+          onChange={(e) => setPerpage(e.target.value)}
+          maxLength={3}
+        />
+      </div>
+      <div>
+        <button type="button" className="bmf-btn bmf-btn-primary" onClick={save}>
+          保存设置
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============ 禁止注册名（原版 banname） ============ */
+export function BannameAdmin({ rows }: { rows: string[] }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [msg, setMsg] = useState("");
+
+  async function add() {
+    setMsg("");
+    if (!name.trim()) return setMsg("请输入要禁止的名称");
+    const r = await post("/api/admin/banname", { action: "add", name: name.trim() });
+    if (!r.ok) return setMsg(r.error || "添加失败");
+    setName("");
+    router.refresh();
+  }
+
+  async function del(n: string) {
+    await post("/api/admin/banname", { action: "delete", name: n });
+    router.refresh();
+  }
+
+  return (
+    <div className="bmf-row">
+      {msg && <div className="mb-2 text-xs text-[#cc3311]">{msg}</div>}
+      <div className="mb-3 flex items-center gap-2">
+        <input
+          className="bmf-input !w-52"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="禁止注册的用户名"
+          maxLength={30}
+        />
+        <button type="button" className="bmf-btn bmf-btn-primary !py-1" onClick={add}>
+          添加
+        </button>
+        <span className="text-[11px] text-[#999]">命中名单的用户名将无法注册</span>
+      </div>
+      {rows.length === 0 ? (
+        <div className="text-xs text-[#999]">暂无禁止注册名。</div>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {rows.map((n) => (
+            <span
+              key={n}
+              className="flex items-center gap-1 rounded-sm border border-[#dddddd] bg-[#f9f9f9] px-2 py-0.5 text-[12px]"
+            >
+              {n}
+              <button type="button" className="text-[#cc3311]" onClick={() => del(n)}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============ 附件管理（原版 attachment） ============ */
+interface AttachRow {
+  id: number;
+  filename: string;
+  size: number;
+  downloads: number;
+  username: string;
+  tid: number;
+}
+
+export function AttachmentsAdmin({ rows }: { rows: AttachRow[] }) {
+  const router = useRouter();
+  const [msg, setMsg] = useState("");
+
+  async function del(id: number) {
+    setMsg("");
+    if (!confirm("确定删除该附件？帖子中的 [attach] 标记将无法显示。")) return;
+    const r = await post("/api/admin/attachments", { action: "delete", id });
+    if (!r.ok) return setMsg(r.error || "删除失败");
+    router.refresh();
+  }
+
+  function fmtSize(n: number): string {
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  return (
+    <div className="bmf-row">
+      {msg && <div className="mb-2 text-xs text-[#cc3311]">{msg}</div>}
+      {rows.length === 0 ? (
+        <div className="text-xs text-[#999]">暂无附件。</div>
+      ) : (
+        rows.map((a) => (
+          <div
+            key={a.id}
+            className="flex items-center justify-between border-b border-[#f0f0f0] py-1.5 text-[13px]"
+          >
+            <span className="min-w-0 flex-1 truncate">
+              <a href={`/api/attachment/${a.id}`} className="text-[#3083be]" target="_blank" rel="noreferrer">
+                {a.filename}
+              </a>
+              <span className="ml-2 text-xs text-[#999]">
+                {fmtSize(a.size)} · 下载 {a.downloads} 次 · 上传者 {a.username}
+              </span>
+            </span>
+            <span className="ml-3 flex flex-shrink-0 items-center gap-3 text-xs">
+              {a.tid > 0 && (
+                <Link href={`/topic/${a.tid}`} className="text-[#3083be]">
+                  所属主题
+                </Link>
+              )}
+              <button type="button" className="text-[#cc3311]" onClick={() => del(a.id)}>
+                删除
+              </button>
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}

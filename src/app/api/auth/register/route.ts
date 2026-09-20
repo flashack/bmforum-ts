@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
-import { queryOne, execute, transaction } from "@/lib/db";
+import { queryOne, execute, transaction, query } from "@/lib/db";
 import { str, readBody, ok, fail } from "@/lib/api";
 import { hashPassword, createSession, clientIp } from "@/lib/auth";
 import { isIpBanned, consumeInviteCode } from "@/lib/moderation";
+import { checkCaptcha } from "@/lib/captcha";
 
 /** POST /api/auth/register —— 注册 */
 export async function POST(req: NextRequest) {
@@ -11,6 +12,15 @@ export async function POST(req: NextRequest) {
   if (await isIpBanned(ip)) return fail("您的 IP 已被禁止注册", 403);
 
   const body = await readBody(req);
+
+  // 图形验证码（复刻原版 authimg.php 校验）
+  const captchaError = checkCaptcha(body);
+  if (captchaError) return fail(captchaError);
+
+  // 站点设置：关闭注册开关
+  const closereg = await queryOne<{ value: string }>("SELECT value FROM bbs_config WHERE key = 'closereg'");
+  if (closereg?.value === "1") return fail("站点已关闭新用户注册，请联系管理员");
+
   const username = str(body, "username", 30);
   const password = str(body, "password", 100);
   const mailadd = str(body, "mailadd", 100);
@@ -22,6 +32,10 @@ export async function POST(req: NextRequest) {
   }
   if (password.length < 6) return fail("密码长度至少 6 位");
   if (mailadd && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mailadd)) return fail("邮箱格式不正确");
+
+  // 禁止注册名单（复刻原版 banname）
+  const banned = await query<{ name: string }>("SELECT name FROM banname WHERE lower(name) = lower($1)", [username]);
+  if (banned.length > 0) return fail("该用户名被禁止注册");
 
   const exists = await queryOne<{ username: string }>(
     "SELECT username FROM userlist WHERE lower(username) = lower($1)",

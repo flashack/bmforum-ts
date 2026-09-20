@@ -65,6 +65,107 @@ export interface AttachInfo {
   downloads: number;
 }
 
+/** beg 表行（出售/礼金/求赏流水，id = 帖子id+"1"/"2"/"3"） */
+export interface BegRow {
+  beglog: string;
+  giftid: string;
+  begers: number;
+  begmoneys: number;
+}
+
+/** 交易标签渲染上下文（服务端按帖子装配） */
+export interface TradeCtx {
+  postId: number;
+  viewerLogged: boolean;
+  viewerIsAuthor: boolean;
+  viewerIsStarter: boolean;
+  viewerIsAdmin: boolean;
+  viewerBought: boolean;
+  isFirstPost: boolean;
+  sellMoney: number;
+  giftMoney: number;
+  /** 出售流水（beg id = 帖子id + "1"） */
+  begSell: BegRow | null;
+  /** 礼金流水（beg id = 主题tid + "2"） */
+  begGift: BegRow | null;
+  /** 求赏流水（beg id = 帖子id + "3"） */
+  begBeg: BegRow | null;
+  moneyUnit: string;
+}
+
+function tradeButton(kind: string, pid: number, label: string, extra = ""): string {
+  return `<button type="button" class="bmf-btn bmf-trade-btn" data-trade="${kind}" data-pid="${pid}"${extra}>${label}</button>`;
+}
+
+/** [sell=M] 出售内容（复刻原版 sellit() sell 分支） */
+function renderSellBox(money: number, innerHtml: string, ctx: TradeCtx): string {
+  const unit = ctx.moneyUnit;
+  const begers = ctx.begSell?.begers ?? 0;
+  const begmoneys = ctx.begSell?.begmoneys ?? 0;
+  const buyerNames = (ctx.begSell?.beglog ?? "").split(",").filter(Boolean);
+  const buyerList = buyerNames.length
+    ? `<span class="bmf-trade-meta">（${buyerNames.join("、")}）</span>`
+    : "";
+  const info = `[此帖售价 ${money} ${unit}，已有 ${begers} 人购买　作者已收入: ${begmoneys} ${unit}]${buyerList}`;
+
+  const canRead = ctx.viewerIsAuthor || ctx.viewerIsAdmin || ctx.viewerBought;
+  const refundBtn =
+    ctx.viewerIsAuthor || ctx.viewerIsAdmin
+      ? `　${tradeButton("refund", ctx.postId, "退款")}`
+      : "";
+
+  if (canRead) {
+    return `<div class="bmf-trade"><div class="bmf-trade-head"><strong>${info}</strong>${refundBtn}</div><hr class="bmf-trade-hr" />${innerHtml}</div>`;
+  }
+  const action = ctx.viewerLogged
+    ? tradeButton("buy", ctx.postId, "算你狠。。我买，我付钱")
+    : `<span class="bmf-trade-meta">请先 <a href="/login">登录</a> 后购买</span>`;
+  return `<div class="bmf-trade"><div class="bmf-trade-head"><strong>${info}</strong></div><hr class="bmf-trade-hr" /><div class="bmf-trade-locked">${action}</div></div>`;
+}
+
+/** [gift=M] 礼金帖（复刻 sellit() gift 分支，仅在首帖生效） */
+function renderGiftBox(money: number, innerHtml: string, ctx: TradeCtx): string {
+  if (!ctx.isFirstPost) return innerHtml;
+  const unit = ctx.moneyUnit;
+  let receivers = "";
+  if (ctx.begGift && ctx.begGift.begers > 0) {
+    const names = ctx.begGift.beglog.split(",").filter(Boolean);
+    receivers =
+      `<div class="bmf-trade"><div class="bmf-trade-head"><strong>下列用户收到了礼金, 共计发出了礼金 ${ctx.begGift.begmoneys} ${unit}　发送礼金次数: ${ctx.begGift.begers}</strong></div>` +
+      `<hr class="bmf-trade-hr" /><div class="bmf-trade-list">${names.join("<br />")}</div></div>`;
+  }
+  return (
+    `<div class="bmf-trade"><div class="bmf-trade-head"><strong>[本帖是礼金帖.帖子作者可以对回复者发放礼金.礼金数为: ${money} ${unit}]</strong></div>` +
+    `<hr class="bmf-trade-hr" />${innerHtml}</div>${receivers}`
+  );
+}
+
+/** [beg] 求赏帖（复刻 sellit() beg 分支） */
+function renderBegBox(innerHtml: string, ctx: TradeCtx): string {
+  const unit = ctx.moneyUnit;
+  let donors = "";
+  if (ctx.begBeg && ctx.begBeg.begers > 0) {
+    const rows = ctx.begBeg.beglog
+      .split(",")
+      .filter(Boolean)
+      .map((e) => {
+        const [name, amount] = e.split("|");
+        return `${name} - ${amount} ${unit}`;
+      });
+    donors =
+      `<div class="bmf-trade"><div class="bmf-trade-head"><strong>捐助者名单　受捐总额: ${ctx.begBeg.begmoneys} ${unit}　会员数: ${ctx.begBeg.begers}</strong></div>` +
+      `<hr class="bmf-trade-hr" /><div class="bmf-trade-list">${rows.join("<br />")}</div></div>`;
+  }
+  const donate =
+    ctx.viewerLogged && !ctx.viewerIsAuthor
+      ? `<div class="bmf-trade-donate">我要捐助 <input type="text" size="5" class="bmf-beg-input" data-pid="${ctx.postId}" /> ${unit} ${tradeButton("beg", ctx.postId, "捐助")}</div>`
+      : "";
+  return (
+    `<div class="bmf-trade"><div class="bmf-trade-head"><strong>[本帖是乞讨帖.您可以给帖子作者一定金额 ${unit} 的援助.]</strong></div>` +
+    `<hr class="bmf-trade-hr" />${innerHtml}${donate}</div>${donors}`
+  );
+}
+
 function fmtSize(n: number): string {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
@@ -74,9 +175,34 @@ function fmtSize(n: number): string {
 /**
  * 解析 BMBCode 为 HTML（输入为原始文本，输出已转义的安全 HTML）
  * @param attachMap 附件元数据（用于渲染 [attach=N] 下载块），可选
+ * @param trade 交易标签上下文（用于渲染 [sell]/[gift]/[beg]），可选
  */
-export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>): string {
-  let s = escapeHtml(input);
+export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>, trade?: TradeCtx): string {
+  // -1. 交易标签预提取（内部递归完整解析，主体中用占位符还原）
+  const tradeBlocks: string[] = [];
+  let raw = input;
+  if (trade) {
+    raw = raw.replace(
+      /\[sell=(\d{1,9})\]([\s\S]*?)\[\/sell\]/gi,
+      (_m, moneyStr: string, inner: string) => {
+        const html = renderSellBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap), trade);
+        tradeBlocks.push(html);
+        return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
+      }
+    );
+    raw = raw.replace(/\[gift=(\d{1,9})\]([\s\S]*?)\[\/gift\]/gi, (_m, moneyStr: string, inner: string) => {
+      const html = renderGiftBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap), trade);
+      tradeBlocks.push(html);
+      return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
+    });
+    raw = raw.replace(/\[beg\]([\s\S]*?)\[\/beg\]/gi, (_m, inner: string) => {
+      const html = renderBegBox(parseBmbCode(inner, attachMap), trade);
+      tradeBlocks.push(html);
+      return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
+    });
+  }
+
+  let s = escapeHtml(raw);
 
   // 0. 表情 [s:xxx] 与附件 [attach=N]
   s = s.replace(
@@ -177,8 +303,9 @@ export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>)
   // 7. 换行
   s = s.replace(/\r\n/g, "\n").replace(/\n/g, "<br />");
 
-  // 8. 还原 code 块
+  // 8. 还原 code 块与交易块
   s = s.replace(/\u0000CODE(\d+)\u0000/g, (_m, idx: string) => codeBlocks[parseInt(idx, 10)] ?? "");
+  s = s.replace(/\u0000TRADE(\d+)\u0000/g, (_m, idx: string) => tradeBlocks[parseInt(idx, 10)] ?? "");
 
   return s;
 }

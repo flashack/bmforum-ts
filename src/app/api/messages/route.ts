@@ -43,3 +43,29 @@ export async function GET() {
   );
   return ok({ list });
 }
+
+/** DELETE /api/messages —— 删除短消息（复刻原版 mess.php del 动作，收发两个副本一并删除） */
+export async function DELETE(req: NextRequest) {
+  const auth = await getAuth();
+  if (!auth.user) return fail("请先登录");
+  const id = Number(new URL(req.url).searchParams.get("id"));
+  if (!Number.isInteger(id) || id <= 0) return fail("消息参数错误");
+
+  const msg = await queryOne<{ id: number; belong: string; sender: string; sendto: string; prtime: number; prtype: string }>(
+    "SELECT id, belong, sender, sendto, prtime, prtype FROM primsg WHERE id = $1",
+    [id]
+  );
+  if (!msg) return fail("消息不存在");
+  // 只能删除自己信箱里的消息（收件或发件副本）
+  const own = (msg.prtype === "r" && msg.belong === auth.user.username) || (msg.prtype === "s" && msg.belong === auth.user.username);
+  if (!own) return fail("您没有权限删除此消息", 403);
+
+  // 同一封邮件的收发两个副本一起删（与原版行为一致）
+  await execute(
+    "DELETE FROM primsg WHERE ((belong = $1 AND prtype = 's') OR (belong = $2 AND prtype = 'r' AND sender = $1 AND sendto = $2 AND prtime = $3))",
+    [auth.user.username, msg.prtype === "r" ? msg.sender : msg.sendto, msg.prtime]
+  );
+  // 兜底：确保至少当前这条被删除
+  await execute("DELETE FROM primsg WHERE id = $1 AND belong = $2", [id, auth.user.username]);
+  return ok({ message: "消息已删除" });
+}

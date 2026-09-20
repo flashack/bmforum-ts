@@ -17,6 +17,13 @@ export default function PostEditor({
   quoteContent,
   quoteAuthor,
   canUpload,
+  editPid,
+  editTid,
+  editIsFirst,
+  editTitle,
+  editTags,
+  editNewdesc,
+  editContent,
 }: {
   forums: EditorForum[];
   defaultForumId?: number;
@@ -25,14 +32,25 @@ export default function PostEditor({
   quoteContent?: string;
   quoteAuthor?: string;
   canUpload?: boolean;
+  editPid?: number;
+  editTid?: number;
+  editIsFirst?: boolean;
+  editTitle?: string;
+  editTags?: string;
+  editNewdesc?: string;
+  editContent?: string;
 }) {
   const isReply = typeof replyTo === "number";
+  const isEdit = typeof editPid === "number";
+  const showThreadFields = (isEdit && editIsFirst) || !isReply;
   const router = useRouter();
   const [forumid, setForumid] = useState<number>(defaultForumId ?? forums[0]?.id ?? 0);
-  const [title, setTitle] = useState(quoteTitle ? `RE: ${quoteTitle}` : "");
-  const [tags, setTags] = useState("");
+  const [title, setTitle] = useState(editTitle ?? (quoteTitle ? `RE: ${quoteTitle}` : ""));
+  const [tags, setTags] = useState(editTags ?? "");
+  const [newdesc, setNewdesc] = useState(editNewdesc ?? "");
   const [content, setContent] = useState(
-    quoteContent ? `[quote=${quoteAuthor ?? ""}]${quoteContent.slice(0, 500)}[/quote]\n` : ""
+    editContent ??
+      (quoteContent ? `[quote=${quoteAuthor ?? ""}]${quoteContent.slice(0, 500)}[/quote]\n` : "")
   );
   const [pollText, setPollText] = useState("");
   const [msg, setMsg] = useState("");
@@ -104,6 +122,24 @@ export default function PostEditor({
     }
     setBusy(true);
     try {
+      if (isEdit && typeof editPid === "number") {
+        const res = await fetch(`/api/posts/${editPid}/edit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content,
+            ...(editIsFirst ? { title, tags, newdesc } : {}),
+          }),
+        });
+        const data = (await res.json()) as { ok: boolean; error?: string };
+        if (!data.ok) {
+          setMsg(data.error || "保存失败");
+          return;
+        }
+        router.push(`/topic/${editTid ?? replyTo ?? 0}`);
+        router.refresh();
+        return;
+      }
       if (isReply && typeof replyTo === "number") {
         const res = await fetch(`/api/threads/${replyTo}/reply`, {
           method: "POST",
@@ -156,16 +192,19 @@ export default function PostEditor({
     ["列表", "[list=1][*]项", "[/list]"],
     ["居中", "[center]", "[/center]"],
     ["分割线", "[hr]", ""],
+    ["出售", "[sell=10]", "[/sell]"],
+    ["礼金", "[gift=10]", "[/gift]"],
+    ["求赏", "[beg]", "[/beg]"],
   ];
 
   return (
     <div className="bmf-table-box">
       <div className="bmf-table-header">
-        <span>{isReply ? `回复主题：${quoteTitle ?? ""}` : "发表新主题"}</span>
+        <span>{isEdit ? "编辑帖子" : isReply ? `回复主题：${quoteTitle ?? ""}` : "发表新主题"}</span>
       </div>
       <div className="bmf-row">
         <div className="grid gap-3">
-          {!isReply && (
+          {!isReply && !isEdit && (
             <div className="grid grid-cols-[90px_1fr] items-center gap-2">
               <span className="bmf-label !mb-0 text-right">发表版块</span>
               <select className="bmf-input !w-64" value={forumid} onChange={(e) => setForumid(Number(e.target.value))}>
@@ -177,7 +216,7 @@ export default function PostEditor({
               </select>
             </div>
           )}
-          {!isReply && (
+          {showThreadFields && (
             <div className="grid grid-cols-[90px_1fr] items-center gap-2">
               <span className="bmf-label !mb-0 text-right">主题标题</span>
               <input
@@ -189,7 +228,7 @@ export default function PostEditor({
               />
             </div>
           )}
-          {!isReply && (
+          {showThreadFields && (
             <div className="grid grid-cols-[90px_1fr] items-center gap-2">
               <span className="bmf-label !mb-0 text-right">Tags 标签</span>
               <input
@@ -197,6 +236,18 @@ export default function PostEditor({
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="用逗号或空格分隔，最多 5 个，如：PostgreSQL, 复刻"
+              />
+            </div>
+          )}
+          {showThreadFields && (
+            <div className="grid grid-cols-[90px_1fr] items-center gap-2">
+              <span className="bmf-label !mb-0 text-right">主题简介</span>
+              <input
+                className="bmf-input"
+                value={newdesc}
+                onChange={(e) => setNewdesc(e.target.value)}
+                placeholder="可选。将显示在版块主题列表的标题下方"
+                maxLength={200}
               />
             </div>
           )}
@@ -252,7 +303,7 @@ export default function PostEditor({
                 rows={12}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="支持 BMBCode：[b]加粗[/b] [i]斜体[/i] [quote]引用[/quote] [code]代码[/code] [img]图片[/img] [url=https://...]链接[/url] [color=red]红色[/color] [list=1][*]列表[/list] [s:icon1100]表情"
+                placeholder="支持 BMBCode：[b]加粗[/b] [quote]引用[/quote] [code]代码[/code] [img]图片[/img] [url=https://...]链接[/url]，交易标签：[sell=金额]出售内容[/sell] [gift=金额]礼金[/gift] [beg]求赏[/beg]，表情 [s:icon1100]"
               />
               {canUpload && (
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
@@ -277,7 +328,7 @@ export default function PostEditor({
               )}
             </div>
           </div>
-          {!isReply && (
+          {!isReply && !isEdit && (
             <div className="grid grid-cols-[90px_1fr] items-start gap-2">
               <span className="bmf-label !mb-0 text-right">发起投票</span>
               <textarea
@@ -291,9 +342,11 @@ export default function PostEditor({
           )}
           {msg && <div className="text-xs text-[#cc3311]">{msg}</div>}
           <div className="flex items-center justify-between">
-            <span className="text-xs text-[#999]">发布后自动跳转到新主题</span>
+            <span className="text-xs text-[#999]">
+              {isEdit ? "保存后返回主题" : "发布后自动跳转到新主题"}
+            </span>
             <button type="button" onClick={submit} disabled={busy} className="bmf-btn bmf-btn-primary">
-              {busy ? "发布中..." : isReply ? "回复主题" : "发表主题"}
+              {busy ? "提交中..." : isEdit ? "保存修改" : isReply ? "回复主题" : "发表主题"}
             </button>
           </div>
         </div>

@@ -111,17 +111,22 @@ export default async function ForumPage({
         ) : (
           threads.map((t) => (
             <div key={t.tid} className="bmf-row flex items-center text-[13px]">
-              <div className="flex min-w-0 flex-1 items-center pr-3">
-                {t.toptype === 1 && <span className="bmf-new" style={{ background: "#e0871c" }}>置顶</span>}
-                {t.toptype === 2 && <span className="bmf-new" style={{ background: "#8a6d3b" }}>精华</span>}
-                {t.islock === 1 && <span className="bmf-new" style={{ background: "#999" }}>锁定</span>}
-                <Link href={`/topic/${t.tid}`} className="truncate">
-                  {t.title}
-                </Link>
-                {t.ttagname && (
-                  <span className="ml-2 hidden flex-shrink-0 text-xs text-[#3083be] md:inline">
-                    [{t.ttagname}]
-                  </span>
+              <div className="flex min-w-0 flex-1 flex-col pr-3">
+                <div className="flex items-center">
+                  {t.toptype === 1 && <span className="bmf-new" style={{ background: "#e0871c" }}>置顶</span>}
+                  {t.toptype === 2 && <span className="bmf-new" style={{ background: "#8a6d3b" }}>精华</span>}
+                  {t.islock === 1 && <span className="bmf-new" style={{ background: "#999" }}>锁定</span>}
+                  <Link href={`/topic/${t.tid}`} className="truncate">
+                    {t.title}
+                  </Link>
+                  {t.ttagname && (
+                    <span className="ml-2 hidden flex-shrink-0 text-xs text-[#3083be] md:inline">
+                      [{t.ttagname}]
+                    </span>
+                  )}
+                </div>
+                {t.newdesc && (
+                  <span className="mt-0.5 truncate text-xs text-[#999]">{t.newdesc}</span>
                 )}
               </div>
               <div className="w-24 flex-shrink-0 truncate text-center text-xs">

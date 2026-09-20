@@ -13,6 +13,9 @@ import {
   IpbanAdmin,
   InviteAdmin,
   RebuildButton,
+  OptionsAdmin,
+  BannameAdmin,
+  AttachmentsAdmin,
 } from "@/components/bmf/admin-panels";
 import { fmtTime } from "@/lib/format";
 
@@ -39,6 +42,9 @@ const TABS: [string, string][] = [
   ["words", "敏感词过滤"],
   ["ipban", "IP 封禁"],
   ["invite", "邀请注册"],
+  ["options", "站点设置"],
+  ["banname", "禁止注册名"],
+  ["attachments", "附件管理"],
   ["logs", "管理日志"],
   ["rebuild", "缓存重建"],
 ];
@@ -100,6 +106,23 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           "SELECT id, time, operator, action, detail FROM adminlog ORDER BY id DESC LIMIT 100"
         )
       : [];
+  const forumLogs =
+    tab === "logs"
+      ? await query<{ id: number; time: number; operator: string; action: string; detail: string; fid: number }>(
+          "SELECT id, time, operator, action, detail, fid FROM forumlog ORDER BY id DESC LIMIT 100"
+        )
+      : [];
+  const optionRows = tab === "options" ? await query<{ key: string; value: string }>("SELECT key, value FROM bbs_config") : [];
+  const optionValues: Record<string, string> = {};
+  for (const r of optionRows) optionValues[r.key] = r.value;
+  const bannames = tab === "banname" ? await query<{ name: string }>("SELECT name FROM banname ORDER BY name") : [];
+  const attachRows =
+    tab === "attachments"
+      ? await query<{ id: number; filename: string; size: number; downloads: number; username: string; tid: number }>(
+          `SELECT id, filename, size, downloads, COALESCE(username, '') AS username, tid
+           FROM attachments ORDER BY id DESC LIMIT 200`
+        )
+      : [];
 
   return (
     <main>
@@ -132,9 +155,13 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
           {tab === "words" && <WordsAdmin rows={words} />}
           {tab === "ipban" && <IpbanAdmin rows={ipbans} />}
           {tab === "invite" && <InviteAdmin rows={invites} enabled={invitereg?.value === "1"} />}
+          {tab === "options" && <OptionsAdmin values={optionValues} />}
+          {tab === "banname" && <BannameAdmin rows={bannames.map((b) => b.name)} />}
+          {tab === "attachments" && <AttachmentsAdmin rows={attachRows} />}
           {tab === "rebuild" && <RebuildButton />}
           {tab === "logs" && (
             <div>
+              <div className="mb-1 text-[13px] font-bold text-[#444444]">管理日志</div>
               {logs.length === 0 ? (
                 <div className="text-xs text-[#999999]">暂无管理日志。</div>
               ) : (
@@ -143,6 +170,19 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
                     <span className="mr-2 text-[#999999]">{fmtTime(l.time)}</span>
                     <b className="text-[#336699]">{l.operator}</b>
                     <span className="mx-2 rounded-sm bg-[#eef4fa] px-1.5 text-[11px] text-[#336699]">{l.action}</span>
+                    <span className="text-[#555555]">{l.detail}</span>
+                  </div>
+                ))
+              )}
+              <div className="mb-1 mt-4 text-[13px] font-bold text-[#444444]">版块日志（举报 / 退款 / 管理操作）</div>
+              {forumLogs.length === 0 ? (
+                <div className="text-xs text-[#999999]">暂无版块日志。</div>
+              ) : (
+                forumLogs.map((l) => (
+                  <div key={l.id} className="border-b border-[#f0f0f0] py-1.5 text-[12px]">
+                    <span className="mr-2 text-[#999999]">{fmtTime(l.time)}</span>
+                    <b className="text-[#336699]">{l.operator}</b>
+                    <span className="mx-2 rounded-sm bg-[#fdf3e7] px-1.5 text-[11px] text-[#c07a1d]">{l.action}</span>
                     <span className="text-[#555555]">{l.detail}</span>
                   </div>
                 ))

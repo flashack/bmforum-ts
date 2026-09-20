@@ -108,6 +108,7 @@ export interface ThreadRow {
   ttype: number;
   ttagname: string;
   ttagid: string;
+  newdesc: string;
 }
 
 export async function getThreads(
@@ -117,7 +118,7 @@ export async function getThreads(
 ): Promise<ThreadRow[]> {
   return query<ThreadRow>(
     `SELECT tid, forumid, toptype, title, author, authorid, time, changetime, hits, replys,
-            lastreply, islock, ttype, ttagname, ttagid
+            lastreply, islock, ttype, ttagname, ttagid, newdesc
      FROM threads
      WHERE forumid = $1 AND ttrash = 0
      ORDER BY toptype DESC, changetime DESC

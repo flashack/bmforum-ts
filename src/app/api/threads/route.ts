@@ -16,6 +16,7 @@ export async function POST(req: NextRequest) {
   const title = await applyWordFilter(str(body, "title", 200));
   const content = await applyWordFilter(str(body, "content", 60000));
   const tags = await applyWordFilter(str(body, "tags", 200));
+  const newdesc = await applyWordFilter(str(body, "newdesc", 240));
   const toptype = num(body, "toptype") || 0;
   const pollOptions = Array.isArray(body.pollOptions)
     ? (body.pollOptions as unknown[])
@@ -40,9 +41,9 @@ export async function POST(req: NextRequest) {
 
   const tid = await transaction(async (c) => {
     const t = await c.query<{ tid: number }>(
-      `INSERT INTO threads (forumid, toptype, title, content, author, authorid, time, changetime, hits, replys, lastreply, ttagname)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, 1, 0, $5, $8) RETURNING tid`,
-      [forumid, toptype, title, content, auth.user!.username, auth.user!.userid, now, tags]
+      `INSERT INTO threads (forumid, toptype, title, content, author, authorid, time, changetime, hits, replys, lastreply, ttagname, newdesc)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, 1, 0, $5, $8, $9) RETURNING tid`,
+      [forumid, toptype, title, content, auth.user!.username, auth.user!.userid, now, tags, newdesc]
     );
     const newTid = t.rows[0].tid;
     await c.query(

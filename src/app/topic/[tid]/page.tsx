@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getAuth, touchOnline } from "@/lib/auth";
 import { getForum, getForumList } from "@/lib/queries";
 import { query, queryOne, execute } from "@/lib/db";
-import { parseBmbCode, type AttachInfo } from "@/lib/bmbcode";
+import { parseBmbCode, type AttachInfo, type TradeCtx, type BegRow } from "@/lib/bmbcode";
 import NaviBar from "@/components/bmf/navi-bar";
 import Pagination from "@/components/bmf/pagination";
 import TopicTools from "@/components/bmf/topic-tools";
@@ -11,11 +11,11 @@ import ReplyBox from "@/components/bmf/reply-box";
 import PollBox from "@/components/bmf/poll-box";
 import FavoriteButton from "@/components/bmf/favorite-button";
 import DiggButton from "@/components/bmf/digg-button";
+import TradeActions from "@/components/bmf/trade-actions";
+import ReportButton from "@/components/bmf/report-button";
 import { avatarUrl, fmtTime, fmtDate, groupName, groupColor } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-
-const PER_PAGE = 10;
 
 interface PostRow {
   id: number;
@@ -25,6 +25,8 @@ interface PostRow {
   usrid: number;
   articlecontent: string;
   timestamp: number;
+  changtime: number;
+  sellbuyer: string;
 }
 
 interface AuthorInfo {
@@ -81,15 +83,19 @@ export default async function TopicPage({
   const all = await getForumList();
   const cat = all.find((c) => c.id === forum.forum_cid);
 
+  // 后台可配每页回复数（原版 setoptions perpage）
+  const perpageRow = await queryOne<{ value: string }>("SELECT value FROM bbs_config WHERE key = 'perpage'");
+  const perpage = Math.min(Math.max(parseInt(perpageRow?.value ?? "10", 10) || 10, 5), 50);
+
   const total = thread.replys + 1;
-  const pages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const pages = Math.max(1, Math.ceil(total / perpage));
   const page = Math.min(Math.max(1, Number(p) || 1), pages);
-  const offset = (page - 1) * PER_PAGE;
+  const offset = (page - 1) * perpage;
 
   const posts = await query<PostRow>(
-    `SELECT id, tid, articletitle, username, usrid, articlecontent, timestamp
+    `SELECT id, tid, articletitle, username, usrid, articlecontent, timestamp, changtime, sellbuyer
      FROM posts WHERE tid = $1 ORDER BY id LIMIT $2 OFFSET $3`,
-    [tid, PER_PAGE, offset]
+    [tid, perpage, offset]
   );
   const usrids = [...new Set(posts.map((x) => x.usrid))];
   const authors = new Map<number, AuthorInfo>();
@@ -129,6 +135,50 @@ export default async function TopicPage({
   const isMod = auth.isMod;
   const mods = forum.blad ? forum.blad.split(",").filter(Boolean) : [];
   const tags = thread.ttagname ? thread.ttagname.split(",").filter(Boolean) : [];
+
+  // ===== 交易标签（出售/礼金/求赏）上下文装配 =====
+  const firstPost = await queryOne<{ id: number; articlecontent: string; usrid: number }>(
+    "SELECT id, articlecontent, usrid FROM posts WHERE tid = $1 ORDER BY id LIMIT 1",
+    [tid]
+  );
+  const moneyRow = await queryOne<{ value: string }>("SELECT value FROM bbs_config WHERE key = 'moneyunit'");
+  const moneyUnit = moneyRow?.value || "金钱";
+  const parseMoney = (content: string, tag: "sell" | "gift"): number => {
+    const m = content.match(new RegExp(`\\[${tag}=(\\d{1,9})\\]`, "i"));
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  const begIds = posts.flatMap((p) => [`${p.id}1`, `${p.id}3`]).concat(`${tid}2`);
+  const begRows = await query<BegRow & { id: string }>(
+    "SELECT id, beglog, giftid, begers, begmoneys FROM beg WHERE id = ANY($1)",
+    [begIds]
+  );
+  const begMap = new Map(begRows.map((r) => [r.id, r]));
+  const giftMoney = firstPost ? parseMoney(firstPost.articlecontent, "gift") : 0;
+
+  const threadAuthorId = thread.authorid;
+
+  /** 为单个帖子构造 parseBmbCode 的交易上下文 */
+  function buildTradeCtx(post: PostRow): TradeCtx | undefined {
+    const sellMoney = parseMoney(post.articlecontent, "sell");
+    const isBeg = /\[beg\]/i.test(post.articlecontent);
+    if (!sellMoney && !isBeg && giftMoney <= 0) return undefined;
+    const buyers = post.sellbuyer.split(",").filter(Boolean).map(Number);
+    return {
+      postId: post.id,
+      viewerLogged: !!auth.user,
+      viewerIsAuthor: auth.user?.userid === post.usrid,
+      viewerIsStarter: auth.user?.userid === threadAuthorId,
+      viewerIsAdmin: auth.isAdmin,
+      viewerBought: auth.user ? buyers.includes(auth.user.userid) : false,
+      isFirstPost: firstPost?.id === post.id,
+      sellMoney,
+      giftMoney,
+      begSell: begMap.get(`${post.id}1`) ?? null,
+      begGift: begMap.get(`${tid}2`) ?? null,
+      begBeg: begMap.get(`${post.id}3`) ?? null,
+      moneyUnit,
+    };
+  }
 
   return (
     <main>
@@ -218,7 +268,7 @@ export default async function TopicPage({
                 </div>
                 <div
                   className="bmf-article"
-                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent, attachMap) }}
+                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent, attachMap, buildTradeCtx(post)) }}
                 />
                 {author?.signtext ? (
                   <div className="mt-4 border-t border-[#dddddd] pt-2 text-xs text-[#888]">
@@ -227,8 +277,24 @@ export default async function TopicPage({
                   </div>
                 ) : null}
                 <div className="mt-3 flex items-center justify-between text-xs text-[#999]">
-                  <span>发帖时间：{fmtTime(post.timestamp)}</span>
                   <span>
+                    发帖时间：{fmtTime(post.timestamp)}
+                    {post.changtime > post.timestamp ? `（编辑于 ${fmtTime(post.changtime)}）` : ""}
+                  </span>
+                  <span className="flex items-center gap-3">
+                    {auth.user && !thread.islock && firstPost && firstPost.usrid === auth.user.userid && post.usrid !== auth.user.userid && giftMoney > 0 && !post.articlecontent.includes("[gift=") ? (
+                      <button type="button" className="text-[#3083be]" data-trade="gift" data-pid={post.id}>
+                        发礼金
+                      </button>
+                    ) : null}
+                    {auth.user && (auth.user.userid === post.usrid || isMod) ? (
+                      <Link href={`/post?edit=${post.id}`} className="text-[#3083be]">
+                        编辑
+                      </Link>
+                    ) : null}
+                    {auth.user && auth.user.userid !== post.usrid ? (
+                      <ReportButton pid={post.id} logged={true} />
+                    ) : null}
                     {auth.user && !thread.islock ? (
                       <Link
                         href={`/post?forumid=${forum.id}&replyto=${tid}&quote=${post.id}`}
@@ -263,6 +329,8 @@ export default async function TopicPage({
           « 返回 {forum.bbsname}
         </Link>
       </div>
+
+      <TradeActions logged={!!auth.user} />
 
       <ReplyBox
         tid={tid}

@@ -582,6 +582,46 @@ html[data-bmf-style="wine"] {
 .bmf-attach-meta {
   color: #999999;
 }
+/* 出售/礼金/求赏（复刻原版 quote_dialog） */
+.bmf-trade {
+  border: 1px solid #bcd4e6;
+  background: #f3f8fc;
+  padding: 6px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.bmf-trade-head {
+  color: #444444;
+}
+.bmf-trade-head strong {
+  font-weight: bold;
+}
+.bmf-trade-hr {
+  border: none;
+  border-top: 1px solid #bcd4e6;
+  margin: 5px 0;
+}
+.bmf-trade-locked {
+  padding: 2px 0;
+}
+.bmf-trade-meta {
+  color: #999999;
+}
+.bmf-trade-list {
+  line-height: 1.7;
+}
+.bmf-trade-donate {
+  margin-top: 5px;
+}
+.bmf-beg-input {
+  border: 1px solid #cccccc;
+  padding: 1px 3px;
+  font-size: 12px;
+  width: 52px;
+}
+.bmf-trade-btn {
+  margin-left: 2px;
+}
 .bmf-digg {
   border: 1px solid #bcd4e6;
   background: #eef4fa;
