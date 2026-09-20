@@ -5,6 +5,7 @@ import { query, queryOne, execute } from "@/lib/db";
 import NaviBar from "@/components/bmf/navi-bar";
 import ComposeForm from "@/components/bmf/compose-form";
 import MessageActions from "@/components/bmf/message-actions";
+import ClearBoxButton from "@/components/bmf/clear-box-button";
 import { fmtTime, fmtRelative } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -115,7 +116,11 @@ export default async function MessengerPage({
               {tab === "inbox" ? "收件箱为空" : "发件箱为空"}
             </div>
           ) : (
-            rows.map((m) => (
+            <>
+              <div className="bmf-row flex justify-end pr-3">
+                <ClearBoxButton box={tab === "inbox" ? "inbox" : "outbox"} />
+              </div>
+            {rows.map((m) => (
               <div key={m.id} className="bmf-row flex items-center text-[13px]">
                 <span className="w-16 flex-shrink-0 text-center">
                   {tab === "inbox" ? (
@@ -145,7 +150,8 @@ export default async function MessengerPage({
                   </span>
                 )}
               </div>
-            ))
+            ))}
+            </>
           )
         ) : tab === "notice" ? (
           notices.length === 0 ? (

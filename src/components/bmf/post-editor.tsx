@@ -53,6 +53,17 @@ export default function PostEditor({
       (quoteContent ? `[quote=${quoteAuthor ?? ""}]${quoteContent.slice(0, 500)}[/quote]\n` : "")
   );
   const [pollText, setPollText] = useState("");
+  const [pollType, setPollType] = useState<"s" | "m">("s");
+  const [pollMax, setPollMax] = useState(2);
+  const [viewAfter, setViewAfter] = useState(false);
+  const [deadlineDate, setDeadlineDate] = useState("");
+  const [minPosts, setMinPosts] = useState(0);
+  // 交易设置（原版 post.php assell/asgift/asbeg 复选框，提交时自动包裹标签）
+  const [asSell, setAsSell] = useState(false);
+  const [sellMoney, setSellMoney] = useState("");
+  const [asGift, setAsGift] = useState(false);
+  const [giftMoney, setGiftMoney] = useState("");
+  const [asBeg, setAsBeg] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
@@ -120,6 +131,11 @@ export default function PostEditor({
       setMsg("请填写内容");
       return;
     }
+    // 交易包裹（复刻原版顺序：[pay=] 最内 → [gift=] → [beg] 最外）
+    let finalContent = content;
+    if (asSell && /^\d{1,9}$/.test(sellMoney)) finalContent = `[pay=${sellMoney}]${finalContent}[/pay]`;
+    if (asGift && /^\d{1,9}$/.test(giftMoney)) finalContent = `[gift=${giftMoney}]${finalContent}[/gift]`;
+    if (asBeg) finalContent = `[beg]${finalContent}[/beg]`;
     setBusy(true);
     try {
       if (isEdit && typeof editPid === "number") {
@@ -144,7 +160,7 @@ export default function PostEditor({
         const res = await fetch(`/api/threads/${replyTo}/reply`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content }),
+          body: JSON.stringify({ content: finalContent }),
         });
         const data = (await res.json()) as { ok: boolean; error?: string };
         if (!data.ok) {
@@ -161,12 +177,17 @@ export default function PostEditor({
         body: JSON.stringify({
           forumid,
           title,
-          content,
+          content: finalContent,
           tags,
           pollOptions: pollText
             .split("\n")
             .map((x) => x.trim())
             .filter(Boolean),
+          pollType,
+          pollMax: Math.max(2, Math.min(20, pollMax || 2)),
+          viewAfter: viewAfter ? 1 : 0,
+          deadline: deadlineDate ? Math.floor(new Date(`${deadlineDate}T23:59:59`).getTime() / 1000) : 0,
+          minposts: Math.max(0, Math.min(99999, minPosts || 0)),
         }),
       });
       const data = (await res.json()) as { ok: boolean; tid?: number; error?: string };
@@ -331,13 +352,98 @@ export default function PostEditor({
           {!isReply && !isEdit && (
             <div className="grid grid-cols-[90px_1fr] items-start gap-2">
               <span className="bmf-label !mb-0 text-right">发起投票</span>
-              <textarea
-                className="bmf-input font-sans"
-                rows={3}
-                value={pollText}
-                onChange={(e) => setPollText(e.target.value)}
-                placeholder={"可选。每行一个投票选项（至少 2 行）发起投票，如：\nDiscuz!\nPHPWind\nBMForum"}
-              />
+              <div>
+                <textarea
+                  className="bmf-input font-sans"
+                  rows={3}
+                  value={pollText}
+                  onChange={(e) => setPollText(e.target.value)}
+                  placeholder={"可选。每行一个投票选项（至少 2 行）发起投票，如：\nDiscuz!\nPHPWind\nBMForum"}
+                />
+                {pollText.trim() && (
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[#444]">
+                    <label className="flex items-center gap-2">
+                      <input type="radio" checked={pollType === "s"} onChange={() => setPollType("s")} className="accent-[#3083be]" />
+                      单选
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="radio" checked={pollType === "m"} onChange={() => setPollType("m")} className="accent-[#3083be]" />
+                      多选，最多可选
+                      <input
+                        type="number"
+                        min={2}
+                        max={20}
+                        value={pollMax}
+                        onChange={(e) => setPollMax(Number(e.target.value))}
+                        disabled={pollType !== "m"}
+                        className="bmf-input !w-14 !py-0.5 !text-xs"
+                      />
+                      项
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input type="checkbox" checked={viewAfter} onChange={(e) => setViewAfter(e.target.checked)} className="accent-[#3083be]" />
+                      投票后才能查看结果
+                    </label>
+                    <label className="flex items-center gap-2">
+                      到期日期
+                      <input
+                        type="date"
+                        value={deadlineDate}
+                        onChange={(e) => setDeadlineDate(e.target.value)}
+                        className="bmf-input !w-36 !py-0.5 !text-xs"
+                      />
+                    </label>
+                    <label className="flex items-center gap-2">
+                      最低发帖数
+                      <input
+                        type="number"
+                        min={0}
+                        value={minPosts}
+                        onChange={(e) => setMinPosts(Number(e.target.value))}
+                        className="bmf-input !w-20 !py-0.5 !text-xs"
+                      />
+                    </label>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {/* 交易设置（原版 post.php 出售/礼金/求赏复选框） */}
+          {!isEdit && (
+            <div className="grid grid-cols-[90px_1fr] items-start gap-2">
+              <span className="bmf-label !mb-0 text-right">交易设置</span>
+              <div className="grid grid-cols-1 gap-1 text-xs text-[#444] md:grid-cols-3">
+                <label className="flex items-center gap-1">
+                  <input type="checkbox" checked={asSell} onChange={(e) => setAsSell(e.target.checked)} className="accent-[#3083be]" />
+                  出售
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="金额"
+                    value={sellMoney}
+                    onChange={(e) => setSellMoney(e.target.value)}
+                    disabled={!asSell}
+                    className="bmf-input !w-16 !py-0.5 !text-xs"
+                  />
+                </label>
+                <label className="flex items-center gap-1">
+                  <input type="checkbox" checked={asGift} onChange={(e) => setAsGift(e.target.checked)} className="accent-[#3083be]" />
+                  礼金{isReply ? "" : "（发给回复者）"}
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="金额"
+                    value={giftMoney}
+                    onChange={(e) => setGiftMoney(e.target.value)}
+                    disabled={!asGift}
+                    className="bmf-input !w-16 !py-0.5 !text-xs"
+                  />
+                </label>
+                <label className="flex items-center gap-1">
+                  <input type="checkbox" checked={asBeg} onChange={(e) => setAsBeg(e.target.checked)} className="accent-[#3083be]" />
+                  求赏
+                </label>
+              </div>
             </div>
           )}
           {msg && <div className="text-xs text-[#cc3311]">{msg}</div>}

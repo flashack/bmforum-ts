@@ -35,10 +35,11 @@ export async function POST(
   }
 
   await transaction(async (c) => {
+    const rip = await clientIp();
     await c.query(
-      `INSERT INTO posts (tid, articletitle, username, usrid, articlecontent, timestamp, forumid, changtime)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $6)`,
-      [tid, thread.title, auth.user!.username, auth.user!.userid, content, now, thread.forumid]
+      `INSERT INTO posts (tid, articletitle, username, usrid, articlecontent, timestamp, forumid, changtime, ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $8)`,
+      [tid, thread.title, auth.user!.username, auth.user!.userid, content, now, thread.forumid, rip]
     );
     await c.query(
       `UPDATE threads SET replys = replys + 1, lastreply = $3, changetime = $2 WHERE tid = $1`,

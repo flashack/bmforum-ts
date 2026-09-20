@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { getAuth, touchOnline, getOnlineStats } from "@/lib/auth";
-import { getForumList, getSiteStats, getAnnounces, getHotTags, getSiteConfig } from "@/lib/queries";
+import { getForumList, getSiteStats, getAnnounces, getHotTags, getSiteConfig, getTodaysBirthdays } from "@/lib/queries";
 import NaviBar from "@/components/bmf/navi-bar";
 import { fmtRelative, fmtNumber, groupName, groupColor } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [auth, config, forums, stats, announces, tags, online] = await Promise.all([
+  const [auth, config, forums, stats, announces, tags, online, birthdays] = await Promise.all([
     getAuth(),
     getSiteConfig(),
     getForumList(),
@@ -15,6 +15,7 @@ export default async function HomePage() {
     getAnnounces(),
     getHotTags(18),
     getOnlineStats(),
+    getTodaysBirthdays(),
   ]);
   await touchOnline(auth, "/");
 
@@ -225,6 +226,29 @@ export default async function HomePage() {
           )}
         </div>
       </div>
+
+      {/* 今日生日（原版 index.php 生日块） */}
+      {birthdays.length > 0 && (
+        <div className="bmf-table-box">
+          <div className="bmf-table-header">
+            <span>今日生日</span>
+            <span className="text-xs font-normal opacity-80">祝他们生日快乐</span>
+          </div>
+          <div className="bmf-row text-xs">
+            {birthdays.map((b) => {
+              const age = new Date().getFullYear() - parseInt(b.birthday.slice(0, 4), 10);
+              return (
+                <span key={b.userid} className="mr-3">
+                  <Link href={`/profile/${b.userid}`} className="font-bold">
+                    {b.username}
+                  </Link>
+                  {age > 0 && age < 200 && <span className="ml-1 text-[#aaa]">({age} 岁)</span>}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

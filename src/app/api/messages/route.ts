@@ -4,12 +4,24 @@ import { num, readBody, str, ok, fail } from "@/lib/api";
 import { getAuth } from "@/lib/auth";
 import { applyWordFilter } from "@/lib/moderation";
 
-/** POST /api/messages —— 发送短消息 */
+/** POST /api/messages —— 发送短消息；action=clear 清空收件箱/发件箱（原版 job=clear） */
 export async function POST(req: NextRequest) {
   const auth = await getAuth();
-  if (!auth.user) return fail("请先登录后再发送消息");
-  if (!auth.user.canpm) return fail("您所在的用户组无权发送短消息", 403);
+  if (!auth.user) return fail("请先登录");
   const body = await readBody(req);
+
+  // 清空信箱（原版 messenger job=clear，仅清自己的信箱副本）
+  if (str(body, "action", 10) === "clear") {
+    const box = str(body, "box", 10);
+    if (box !== "inbox" && box !== "outbox") return fail("信箱参数错误");
+    const r = await execute(
+      "DELETE FROM primsg WHERE belong = $1 AND prtype = $2",
+      [auth.user.username, box === "inbox" ? "r" : "s"]
+    );
+    return ok({ message: "信箱已清空", removed: r.rowCount ?? 0 });
+  }
+
+  if (!auth.user.canpm) return fail("您所在的用户组无权发送短消息", 403);
   const sendto = str(body, "sendto", 30);
   const prtitle = await applyWordFilter(str(body, "title", 100));
   const prcontent = await applyWordFilter(str(body, "content", 20000));

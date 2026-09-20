@@ -91,3 +91,17 @@ export async function sendNotification(
     [senderid, sendername, receiverid, ntype, nvalue, pkey, now]
   );
 }
+
+/** 写入版块操作日志（原版 forumlogs） */
+export async function logForumAction(
+  fid: number,
+  operator: string,
+  action: string,
+  detail: string
+): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  await execute(
+    "INSERT INTO forumlog (fid, time, operator, action, detail) VALUES ($1, $2, $3, $4, $5)",
+    [fid, now, operator, action, detail.slice(0, 200)]
+  );
+}

@@ -93,6 +93,22 @@ export interface TradeCtx {
   moneyUnit: string;
 }
 
+/** 读者上下文（隐藏类标签 [post]/[hpost]/[hmoney]/[hide] 的可见性判定，复刻原版 checkpaid/checkhiden） */
+export interface ViewerCtx {
+  /** 是否登录 */
+  logged: boolean;
+  /** 是否作者/版主/管理员（总是可见） */
+  privileged: boolean;
+  /** 读者是否回复过当前主题（[post]） */
+  hasReplied?: boolean;
+  /** 读者发帖数（[hpost=N]） */
+  postamount?: number;
+  /** 读者金钱（[hmoney=M]） */
+  money?: number;
+  /** 读者积分（[hide=N]） */
+  point?: number;
+}
+
 function tradeButton(kind: string, pid: number, label: string, extra = ""): string {
   return `<button type="button" class="bmf-btn bmf-trade-btn" data-trade="${kind}" data-pid="${pid}"${extra}>${label}</button>`;
 }
@@ -176,31 +192,80 @@ function fmtSize(n: number): string {
  * 解析 BMBCode 为 HTML（输入为原始文本，输出已转义的安全 HTML）
  * @param attachMap 附件元数据（用于渲染 [attach=N] 下载块），可选
  * @param trade 交易标签上下文（用于渲染 [sell]/[gift]/[beg]），可选
+ * @param viewer 读者上下文（用于渲染 [post]/[hpost]/[hmoney]/[hide]），可选
  */
-export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>, trade?: TradeCtx): string {
+export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>, trade?: TradeCtx, viewer?: ViewerCtx): string {
   // -1. 交易标签预提取（内部递归完整解析，主体中用占位符还原）
   const tradeBlocks: string[] = [];
   let raw = input;
   if (trade) {
+    // [pay=M] 与 [sell=M] 同义（原版 post.php 出售包裹用 [pay=]，sellit() 解析二者）
     raw = raw.replace(
-      /\[sell=(\d{1,9})\]([\s\S]*?)\[\/sell\]/gi,
+      /\[(?:sell|pay)=(\d{1,9})\]([\s\S]*?)\[\/(?:sell|pay)\]/gi,
       (_m, moneyStr: string, inner: string) => {
-        const html = renderSellBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap), trade);
+        const html = renderSellBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap, undefined, viewer), trade);
         tradeBlocks.push(html);
         return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
       }
     );
     raw = raw.replace(/\[gift=(\d{1,9})\]([\s\S]*?)\[\/gift\]/gi, (_m, moneyStr: string, inner: string) => {
-      const html = renderGiftBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap), trade);
+      const html = renderGiftBox(parseInt(moneyStr, 10), parseBmbCode(inner, attachMap, undefined, viewer), trade);
       tradeBlocks.push(html);
       return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
     });
     raw = raw.replace(/\[beg\]([\s\S]*?)\[\/beg\]/gi, (_m, inner: string) => {
-      const html = renderBegBox(parseBmbCode(inner, attachMap), trade);
+      const html = renderBegBox(parseBmbCode(inner, attachMap, undefined, viewer), trade);
       tradeBlocks.push(html);
       return `\u0000TRADE${tradeBlocks.length - 1}\u0000`;
     });
   }
+
+  // -0.5 隐藏类标签（原版 [post]/[hpost=N]/[hmoney=M]/[hide=N]，不可见时绝不泄露原文）
+  // 占位符与交易块共用同一池（尾部统一还原 \u0000TRADE<n>\u0000）
+  const pushHiddenBox = (ok: boolean, tip: string, inner: string): number => {
+    tradeBlocks.push(
+      ok
+        ? `<div class="bmf-hbox"><div class="bmf-hbox-tip">${tip}</div><hr class="bmf-trade-hr" />${parseBmbCode(inner, attachMap, trade, viewer)}</div>`
+        : `<div class="bmf-hbox bmf-hbox-locked"><div class="bmf-hbox-tip"><strong>${tip}</strong></div></div>`
+    );
+    return tradeBlocks.length - 1;
+  };
+  const vbox = viewer;
+  raw = raw.replace(/\[post\]([\s\S]*?)\[\/post\]/gi, (_m, inner: string) => {
+    const ok = !!vbox && vbox.logged && (vbox.privileged || !!vbox.hasReplied);
+    const tip = !vbox || !vbox.logged ? "请先 <a href=\"/login\">登录</a>，回复本帖后才能查看此处内容"
+      : ok ? "[ 您已回复过本帖，以下内容可见 ]"
+      : "回复本帖后才能查看此处内容";
+    return `\u0000TRADE${pushHiddenBox(ok, tip, inner)}\u0000`;
+  });
+  raw = raw.replace(/\[hpost=(\d{1,9})\]([\s\S]*?)\[\/hpost\]/gi, (_m, nStr: string, inner: string) => {
+    const n = parseInt(nStr, 10);
+    const mine = vbox?.postamount ?? 0;
+    const ok = !!vbox && vbox.logged && (vbox.privileged || mine >= n);
+    const tip = !vbox || !vbox.logged ? "请先 <a href=\"/login\">登录</a>，发帖数达到 " + n + " 后才能查看此处内容"
+      : ok ? "[ 您的发帖数已达 " + n + " 篇，以下内容可见 ]"
+      : "您的发帖数未达到 " + n + " 篇，暂时无法查看此处内容";
+    return `\u0000TRADE${pushHiddenBox(ok, tip, inner)}\u0000`;
+  });
+  raw = raw.replace(/\[hmoney=(\d{1,9})\]([\s\S]*?)\[\/hmoney\]/gi, (_m, mStr: string, inner: string) => {
+    const m = parseInt(mStr, 10);
+    const mine = vbox?.money ?? 0;
+    const ok = !!vbox && vbox.logged && (vbox.privileged || mine >= m);
+    const tip = !vbox || !vbox.logged ? "请先 <a href=\"/login\">登录</a>，金钱达到 " + m + " 后才能查看此处内容"
+      : ok ? "[ 您的金钱已达到 " + m + "，以下内容可见 ]"
+      : "您的金钱不足 " + m + "，暂时无法查看此处内容";
+    return `\u0000TRADE${pushHiddenBox(ok, tip, inner)}\u0000`;
+  });
+  raw = raw.replace(/\[hide=(\d{1,9})\]([\s\S]*?)\[\/hide\]/gi, (_m, pStr: string, inner: string) => {
+    const p = parseInt(pStr, 10);
+    const mine = vbox?.point ?? 0;
+    const ok = !!vbox && vbox.logged && (vbox.privileged || mine >= p);
+    const tip = !vbox || !vbox.logged ? "请先 <a href=\"/login\">登录</a>，积分达到 " + p + " 后才能查看此处内容"
+      : ok ? "[ 您的积分已达到 " + p + "，以下内容可见 ]"
+      : "您的积分不足 " + p + "，暂时无法查看此处内容";
+    return `\u0000TRADE${pushHiddenBox(ok, tip, inner)}\u0000`;
+  });
+  // 隐藏框占位（主体转义后再还原，内容已按需展示/隐藏）
 
   let s = escapeHtml(raw);
 
@@ -269,6 +334,24 @@ export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>,
   s = s.replace(/\[s\]([\s\S]*?)\[\/s\]/gi, "<del>$1</del>");
   s = s.replace(/\[center\]([\s\S]*?)\[\/center\]/gi, '<div style="text-align:center">$1</div>');
   s = s.replace(/\[right\]([\s\S]*?)\[\/right\]/gi, '<div style="text-align:right">$1</div>');
+  // 对齐与上下标（原版 [align=]/[sub]/[sup]）
+  s = s.replace(
+    /\[align=(left|center|right|justify)\]([\s\S]*?)\[\/align\]/gi,
+    (_m, dir: string, body: string) => `<div style="text-align:${dir}">${body}</div>`
+  );
+  s = s.replace(/\[sub\]([\s\S]*?)\[\/sub\]/gi, "<sub>$1</sub>");
+  s = s.replace(/\[sup\]([\s\S]*?)\[\/sup\]/gi, "<sup>$1</sup>");
+  // 光晕/阴影文字（原版 [glow=W,颜色]/[shadow=W,颜色]，Web 2.0 特效）
+  s = s.replace(
+    /\[glow=(\d{1,3}),([#0-9a-zA-Z]{1,20})\]([\s\S]*?)\[\/glow\]/gi,
+    (_m, w: string, c: string, body: string) =>
+      `<span style="display:inline-block;filter:glow(color=${c},strength=${w});text-shadow:0 0 ${w}px ${c}">${body}</span>`
+  );
+  s = s.replace(
+    /\[shadow=(\d{1,3}),([#0-9a-zA-Z]{1,20})\]([\s\S]*?)\[\/shadow\]/gi,
+    (_m, w: string, c: string, body: string) =>
+      `<span style="text-shadow:${w}px ${w}px 2px ${c}">${body}</span>`
+  );
   s = s.replace(/\[hr\]/gi, '<hr style="border:none;border-top:1px solid #ddd;margin:8px 0;" />');
 
   // 5. 颜色/字号
@@ -314,6 +397,11 @@ export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>,
 export function bmbCodeToPlain(input: string, maxLen = 100): string {
   const text = input
     .replace(/\[code\][\s\S]*?\[\/code\]/gi, "[代码]")
+    // 隐藏类内容不出现在摘要中（原版行为：未满足条件不可见）
+    .replace(/\[post\][\s\S]*?\[\/post\]/gi, "[隐藏内容]")
+    .replace(/\[hpost=\d+\][\s\S]*?\[\/hpost\]/gi, "[隐藏内容]")
+    .replace(/\[hmoney=\d+\][\s\S]*?\[\/hmoney\]/gi, "[隐藏内容]")
+    .replace(/\[hide=\d+\][\s\S]*?\[\/hide\]/gi, "[隐藏内容]")
     .replace(/\[img\][^\[]*\[\/img\]/gi, "[图片]")
     .replace(/\[attach=\d+\]/gi, "[附件]")
     .replace(/\[s:[A-Za-z0-9]+\]/g, "[表情]")

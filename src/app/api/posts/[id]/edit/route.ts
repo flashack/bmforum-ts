@@ -120,7 +120,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const now = Math.floor(Date.now() / 1000);
   await transaction(async (c) => {
-    await c.query("UPDATE posts SET articlecontent = $1, changtime = $2 WHERE id = $3", [content, now, post.id]);
+    await c.query("UPDATE posts SET articlecontent = $1, changtime = $2, editinfo = $3 WHERE id = $4", [
+      content,
+      now,
+      `${now}|${auth.user!.username}`,
+      post.id,
+    ]);
     if (isFirstPost) {
       await c.query("UPDATE threads SET title = $1, newdesc = $2, ttagname = $3, changetime = $4 WHERE tid = $5", [
         newTitle,

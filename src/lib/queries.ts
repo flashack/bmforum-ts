@@ -109,6 +109,8 @@ export interface ThreadRow {
   ttagname: string;
   ttagid: string;
   newdesc: string;
+  digest: number;
+  type: number;
 }
 
 export async function getThreads(
@@ -118,7 +120,7 @@ export async function getThreads(
 ): Promise<ThreadRow[]> {
   return query<ThreadRow>(
     `SELECT tid, forumid, toptype, title, author, authorid, time, changetime, hits, replys,
-            lastreply, islock, ttype, ttagname, ttagid, newdesc
+            lastreply, islock, ttype, ttagname, ttagid, newdesc, digest, type
      FROM threads
      WHERE forumid = $1 AND ttrash = 0
      ORDER BY toptype DESC, changetime DESC
@@ -135,10 +137,23 @@ export async function countThreads(forumid: number): Promise<number> {
   return parseInt(row?.c ?? "0", 10);
 }
 
+/** 今日生日会员（原版 index.php 生日块：birthday MM-DD 匹配当天） */
+export async function getTodaysBirthdays(): Promise<
+  { userid: number; username: string; birthday: string }[]
+> {
+  return query(
+    `SELECT userid, username, birthday FROM userlist
+     WHERE birthday <> ''
+       AND substr(birthday, 6, 5) = to_char(now(), 'MM-DD')
+     ORDER BY userid
+     LIMIT 100`
+  );
+}
+
 export async function getLatestThreads(limit = 10): Promise<ThreadRow[]> {
   return query<ThreadRow>(
     `SELECT tid, forumid, toptype, title, author, authorid, time, changetime, hits, replys,
-            lastreply, islock, ttype, ttagname, ttagid
+            lastreply, islock, ttype, ttagname, ttagid, digest, type
      FROM threads WHERE ttrash = 0
      ORDER BY changetime DESC LIMIT $1`,
     [limit]

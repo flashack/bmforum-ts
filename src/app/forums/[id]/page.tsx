@@ -113,9 +113,14 @@ export default async function ForumPage({
             <div key={t.tid} className="bmf-row flex items-center text-[13px]">
               <div className="flex min-w-0 flex-1 flex-col pr-3">
                 <div className="flex items-center">
-                  {t.toptype === 1 && <span className="bmf-new" style={{ background: "#e0871c" }}>置顶</span>}
-                  {t.toptype === 2 && <span className="bmf-new" style={{ background: "#8a6d3b" }}>精华</span>}
-                  {t.islock === 1 && <span className="bmf-new" style={{ background: "#999" }}>锁定</span>}
+                  {t.toptype >= 1 && (
+                    <span className="bmf-new" style={{ background: "#e0871c" }}>
+                      {t.toptype === 3 ? "全局顶" : t.toptype === 2 ? "分类顶" : "置顶"}
+                    </span>
+                  )}
+                  {t.digest === 1 && <span className="bmf-new" style={{ background: "#8a6d3b" }}>精华</span>}
+                  {t.type === 1 && <span className="bmf-new" style={{ background: "#5b8c5a" }}>投票</span>}
+                  {(t.islock === 1 || t.islock === 3) && <span className="bmf-new" style={{ background: "#999" }}>锁定</span>}
                   <Link href={`/topic/${t.tid}`} className="truncate">
                     {t.title}
                   </Link>

@@ -619,6 +619,20 @@ html[data-bmf-style="wine"] {
   font-size: 12px;
   width: 52px;
 }
+/* 隐藏类内容框（[post]/[hpost]/[hmoney]/[hide]，复刻原版 quote_dialog 形态） */
+.bmf-hbox {
+  border: 1px dashed #cccccc;
+  background: #fafafa;
+  padding: 6px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.bmf-hbox-tip {
+  color: #444444;
+}
+.bmf-hbox-locked .bmf-hbox-tip {
+  color: #cc3311;
+}
 .bmf-trade-btn {
   margin-left: 2px;
 }

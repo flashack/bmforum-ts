@@ -24,6 +24,12 @@ export async function POST(req: NextRequest) {
         .filter(Boolean)
         .slice(0, 20)
     : [];
+  const pollType = str(body, "pollType", 1) === "m" ? "m" : "s";
+  const pollMaxRaw = num(body, "pollMax") || 2;
+  const pollMax = Math.max(2, Math.min(20, pollMaxRaw));
+  const viewAfter = num(body, "viewAfter") === 1 ? 1 : 0;
+  const deadline = num(body, "deadline") || 0;
+  const minposts = Math.max(0, Math.min(99999, num(body, "minposts") || 0));
 
   if (!Number.isInteger(forumid) || forumid <= 0) return fail("版块参数错误");
   if (!title) return fail("请填写标题");
@@ -40,22 +46,24 @@ export async function POST(req: NextRequest) {
   }
 
   const tid = await transaction(async (c) => {
+    const rip = await clientIp();
     const t = await c.query<{ tid: number }>(
-      `INSERT INTO threads (forumid, toptype, title, content, author, authorid, time, changetime, hits, replys, lastreply, ttagname, newdesc)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, 1, 0, $5, $8, $9) RETURNING tid`,
-      [forumid, toptype, title, content, auth.user!.username, auth.user!.userid, now, tags, newdesc]
+      `INSERT INTO threads (forumid, toptype, title, content, author, authorid, time, changetime, hits, replys, lastreply, ttagname, newdesc, type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $7, 1, 0, $5, $8, $9, $10) RETURNING tid`,
+      [forumid, toptype, title, content, auth.user!.username, auth.user!.userid, now, tags, newdesc, pollOptions.length >= 2 ? 1 : 0]
     );
     const newTid = t.rows[0].tid;
     await c.query(
-      `INSERT INTO posts (tid, articletitle, username, usrid, articlecontent, timestamp, forumid, changtime)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $6)`,
-      [newTid, title, auth.user!.username, auth.user!.userid, content, now, forumid]
+      `INSERT INTO posts (tid, articletitle, username, usrid, articlecontent, timestamp, forumid, changtime, ip)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $6, $8)`,
+      [newTid, title, auth.user!.username, auth.user!.userid, content, now, forumid, rip]
     );
     if (pollOptions.length >= 2) {
-      await c.query(`INSERT INTO polls (tid, options, polluser, maxchoose) VALUES ($1, $2::jsonb, '[]'::jsonb, 1)`, [
-        newTid,
-        JSON.stringify(pollOptions.map((text) => ({ text, votes: 0 }))),
-      ]);
+      const maxchoose = pollType === "m" ? Math.min(pollMax, pollOptions.length) : 1;
+      await c.query(
+        `INSERT INTO polls (tid, options, polluser, maxchoose, viewafter, minposts, deadline) VALUES ($1, $2::jsonb, '[]'::jsonb, $3, $4, $5, $6)`,
+        [newTid, JSON.stringify(pollOptions.map((text) => ({ text, votes: 0 }))), maxchoose, viewAfter, minposts, deadline]
+      );
     }
     await c.query(
       `UPDATE forumdata SET topicnum = topicnum + 1, todayp = todayp + 1,

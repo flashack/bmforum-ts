@@ -33,7 +33,15 @@ CREATE TABLE IF NOT EXISTS usergroup (
   id INT PRIMARY KEY,
   groupname TEXT NOT NULL DEFAULT '',
   groupicon TEXT NOT NULL DEFAULT '',
-  showsort INT NOT NULL DEFAULT 0
+  showsort INT NOT NULL DEFAULT 0,
+  canview SMALLINT NOT NULL DEFAULT 1,
+  canpost SMALLINT NOT NULL DEFAULT 1,
+  canreply SMALLINT NOT NULL DEFAULT 1,
+  canupload SMALLINT NOT NULL DEFAULT 1,
+  canvote SMALLINT NOT NULL DEFAULT 1,
+  canpm SMALLINT NOT NULL DEFAULT 1,
+  candigg SMALLINT NOT NULL DEFAULT 1,
+  cansearch SMALLINT NOT NULL DEFAULT 1
 );
 
 -- 用户（原 userlist）
@@ -90,7 +98,11 @@ CREATE TABLE IF NOT EXISTS threads (
   ttype SMALLINT NOT NULL DEFAULT 0,
   ttagname VARCHAR(200) NOT NULL DEFAULT '',
   ttagid VARCHAR(100) NOT NULL DEFAULT '',
-  diggcount INT NOT NULL DEFAULT 0
+  diggcount INT NOT NULL DEFAULT 0,
+  digguser TEXT NOT NULL DEFAULT '',
+  newdesc TEXT NOT NULL DEFAULT '',
+  digest SMALLINT NOT NULL DEFAULT 0,
+  type SMALLINT NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_threads_forum ON threads (forumid, toptype, ttrash, changetime);
 CREATE INDEX IF NOT EXISTS idx_threads_change ON threads (changetime);
@@ -107,7 +119,10 @@ CREATE TABLE IF NOT EXISTS posts (
   articlecontent TEXT NOT NULL DEFAULT '',
   timestamp INT NOT NULL DEFAULT 0,
   changtime INT NOT NULL DEFAULT 0,
-  posttrash SMALLINT NOT NULL DEFAULT 0
+  posttrash SMALLINT NOT NULL DEFAULT 0,
+  sellbuyer TEXT NOT NULL DEFAULT '',
+  editinfo TEXT NOT NULL DEFAULT '',
+  ip TEXT NOT NULL DEFAULT ''
 );
 CREATE INDEX IF NOT EXISTS idx_posts_tid ON posts (tid, id);
 CREATE INDEX IF NOT EXISTS idx_posts_user ON posts (usrid);
@@ -169,7 +184,8 @@ CREATE TABLE IF NOT EXISTS notification (
   ntype VARCHAR(20) NOT NULL DEFAULT '',
   nvalue TEXT NOT NULL DEFAULT '',
   pkey INT NOT NULL DEFAULT 0,
-  timestamp INT NOT NULL DEFAULT 0
+  timestamp INT NOT NULL DEFAULT 0,
+  isread SMALLINT NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_notif_receiver ON notification (receiverid, timestamp);
 
@@ -254,4 +270,69 @@ CREATE TABLE IF NOT EXISTS forumlog (
 -- 禁止注册名单（原版 banname）
 CREATE TABLE IF NOT EXISTS banname (
   name VARCHAR(60) PRIMARY KEY
+);
+
+-- BMF7 细节补齐（migrate4）
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS editinfo TEXT NOT NULL DEFAULT '';
+ALTER TABLE userlist ADD COLUMN IF NOT EXISTS digestmount INT NOT NULL DEFAULT 0;
+ALTER TABLE forumdata ADD COLUMN IF NOT EXISTS digestcount INT NOT NULL DEFAULT 0;
+ALTER TABLE polls ADD COLUMN IF NOT EXISTS viewafter SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE polls ADD COLUMN IF NOT EXISTS minposts INT NOT NULL DEFAULT 0;
+ALTER TABLE posts ADD COLUMN IF NOT EXISTS ip TEXT NOT NULL DEFAULT '';
+ALTER TABLE threads ADD COLUMN IF NOT EXISTS digest SMALLINT NOT NULL DEFAULT 0;
+-- threads.type：主题类型（原版 1=投票主题）
+ALTER TABLE threads ADD COLUMN IF NOT EXISTS type SMALLINT NOT NULL DEFAULT 0;
+
+-- 附件（原 attachments，含头像与上传附件，内容存 BYTEA）
+CREATE TABLE IF NOT EXISTS attachments (
+  id SERIAL PRIMARY KEY,
+  tid INT NOT NULL DEFAULT 0,
+  pid INT NOT NULL DEFAULT 0,
+  filename TEXT NOT NULL DEFAULT '',
+  mimetype TEXT NOT NULL DEFAULT 'application/octet-stream',
+  size INT NOT NULL DEFAULT 0,
+  uploader VARCHAR(24) NOT NULL DEFAULT '',
+  uploadtime BIGINT NOT NULL DEFAULT 0,
+  downloads INT NOT NULL DEFAULT 0,
+  isavatar SMALLINT NOT NULL DEFAULT 0,
+  data BYTEA NOT NULL
+);
+
+-- 敏感词过滤（原 wordfilter）
+CREATE TABLE IF NOT EXISTS wordfilter (
+  id SERIAL PRIMARY KEY,
+  find TEXT NOT NULL,
+  replacewith TEXT NOT NULL DEFAULT '*'
+);
+
+-- IP 封禁（原 ipban，前缀匹配）
+CREATE TABLE IF NOT EXISTS ipban (
+  id SERIAL PRIMARY KEY,
+  ip TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  addtime BIGINT NOT NULL DEFAULT 0
+);
+
+-- 邀请码（原 invitecode）
+CREATE TABLE IF NOT EXISTS invitecode (
+  id SERIAL PRIMARY KEY,
+  code VARCHAR(32) NOT NULL UNIQUE,
+  usedby VARCHAR(24) NOT NULL DEFAULT '',
+  usedtime BIGINT NOT NULL DEFAULT 0,
+  createtime BIGINT NOT NULL DEFAULT 0
+);
+
+-- 管理日志（原 adminlog）
+CREATE TABLE IF NOT EXISTS adminlog (
+  id SERIAL PRIMARY KEY,
+  time BIGINT NOT NULL DEFAULT 0,
+  operator VARCHAR(24) NOT NULL DEFAULT '',
+  action VARCHAR(40) NOT NULL DEFAULT '',
+  detail TEXT NOT NULL DEFAULT ''
+);
+
+-- 站点配置-邀请注册开关（原 config）
+CREATE TABLE IF NOT EXISTS config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL DEFAULT ''
 );

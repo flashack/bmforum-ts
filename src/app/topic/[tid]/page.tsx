@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { getAuth, touchOnline } from "@/lib/auth";
 import { getForum, getForumList } from "@/lib/queries";
 import { query, queryOne, execute } from "@/lib/db";
-import { parseBmbCode, type AttachInfo, type TradeCtx, type BegRow } from "@/lib/bmbcode";
+import { parseBmbCode, type AttachInfo, type TradeCtx, type BegRow, type ViewerCtx } from "@/lib/bmbcode";
 import NaviBar from "@/components/bmf/navi-bar";
 import Pagination from "@/components/bmf/pagination";
 import TopicTools from "@/components/bmf/topic-tools";
@@ -13,6 +13,7 @@ import FavoriteButton from "@/components/bmf/favorite-button";
 import DiggButton from "@/components/bmf/digg-button";
 import TradeActions from "@/components/bmf/trade-actions";
 import ReportButton from "@/components/bmf/report-button";
+import PostManageButton from "@/components/bmf/post-manage-button";
 import { avatarUrl, fmtTime, fmtDate, groupName, groupColor } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,8 @@ interface PostRow {
   timestamp: number;
   changtime: number;
   sellbuyer: string;
+  editinfo: string;
+  ip: string;
 }
 
 interface AuthorInfo {
@@ -93,7 +96,7 @@ export default async function TopicPage({
   const offset = (page - 1) * perpage;
 
   const posts = await query<PostRow>(
-    `SELECT id, tid, articletitle, username, usrid, articlecontent, timestamp, changtime, sellbuyer
+    `SELECT id, tid, articletitle, username, usrid, articlecontent, timestamp, changtime, sellbuyer, editinfo, ip
      FROM posts WHERE tid = $1 ORDER BY id LIMIT $2 OFFSET $3`,
     [tid, perpage, offset]
   );
@@ -113,7 +116,23 @@ export default async function TopicPage({
     options: { text: string; votes: number }[];
     polluser: number[] | string;
     maxchoose: number;
-  }>("SELECT options, polluser, maxchoose FROM polls WHERE tid = $1", [tid]);
+    viewafter: number;
+    minposts: number;
+    deadline: number;
+  }>("SELECT options, polluser, maxchoose, viewafter, minposts, deadline FROM polls WHERE tid = $1", [tid]);
+  let pollVoters: { userid: number; username: string }[] = [];
+  let pollVoted = false;
+  if (poll) {
+    const rawVoters = typeof poll.polluser === "string" ? JSON.parse(poll.polluser || "[]") : poll.polluser;
+    const voterIds = Array.isArray(rawVoters) ? rawVoters.map(Number) : [];
+    pollVoted = !!auth.user && voterIds.includes(auth.user.userid);
+    if (voterIds.length > 0) {
+      pollVoters = (await query<{ userid: number; username: string }>(
+        "SELECT userid, username FROM userlist WHERE userid = ANY($1) ORDER BY userid",
+        [voterIds]
+      )).slice(0, 200);
+    }
+  }
 
   // 附件元数据（用于渲染 [attach=N]）
   const attachRows = await query<AttachInfo & { tid: number }>(
@@ -144,7 +163,9 @@ export default async function TopicPage({
   const moneyRow = await queryOne<{ value: string }>("SELECT value FROM bbs_config WHERE key = 'moneyunit'");
   const moneyUnit = moneyRow?.value || "金钱";
   const parseMoney = (content: string, tag: "sell" | "gift"): number => {
-    const m = content.match(new RegExp(`\\[${tag}=(\\d{1,9})\\]`, "i"));
+    // 原版出售写作 [pay=金额]（post.php 包裹）或 [sell=金额]，二者同义
+    const pattern = tag === "sell" ? "\\[(?:sell|pay)=(\\d{1,9})\\]" : `\\[${tag}=(\\d{1,9})\\]`;
+    const m = content.match(new RegExp(pattern, "i"));
     return m ? parseInt(m[1], 10) : 0;
   };
   const begIds = posts.flatMap((p) => [`${p.id}1`, `${p.id}3`]).concat(`${tid}2`);
@@ -156,6 +177,24 @@ export default async function TopicPage({
   const giftMoney = firstPost ? parseMoney(firstPost.articlecontent, "gift") : 0;
 
   const threadAuthorId = thread.authorid;
+
+  // 隐藏类标签（[post]/[hpost]/[hmoney]/[hide]）读者上下文
+  const viewerHasReplied = auth.user
+    ? (await queryOne<{ id: number }>(
+        "SELECT id FROM posts WHERE tid = $1 AND usrid = $2 AND posttrash = 0 LIMIT 1",
+        [tid, auth.user.userid]
+      )) !== null
+    : false;
+  function buildViewerCtx(post: PostRow): ViewerCtx {
+    return {
+      logged: !!auth.user,
+      privileged: isMod || auth.user?.userid === post.usrid,
+      hasReplied: viewerHasReplied,
+      postamount: auth.user?.postamount ?? 0,
+      money: auth.user?.money ?? 0,
+      point: auth.user?.point ?? 0,
+    };
+  }
 
   /** 为单个帖子构造 parseBmbCode 的交易上下文 */
   function buildTradeCtx(post: PostRow): TradeCtx | undefined {
@@ -218,7 +257,16 @@ export default async function TopicPage({
         </div>
 
         {/* 投票 */}
-        {poll && <PollBox poll={poll} tid={tid} canVote={!!auth.user && !auth.isAdmin} />}
+        {poll && (
+          <PollBox
+            poll={poll}
+            tid={tid}
+            canVote={!!auth.user && !auth.isAdmin && auth.user.canvote === 1}
+            voted={pollVoted}
+            viewerPostamount={auth.user ? auth.user.postamount : 0}
+            voters={pollVoters}
+          />
+        )}
 
         {/* 帖子列表 */}
         {posts.map((post, idx) => {
@@ -268,7 +316,7 @@ export default async function TopicPage({
                 </div>
                 <div
                   className="bmf-article"
-                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent, attachMap, buildTradeCtx(post)) }}
+                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent, attachMap, buildTradeCtx(post), buildViewerCtx(post)) }}
                 />
                 {author?.signtext ? (
                   <div className="mt-4 border-t border-[#dddddd] pt-2 text-xs text-[#888]">
@@ -280,8 +328,22 @@ export default async function TopicPage({
                   <span>
                     发帖时间：{fmtTime(post.timestamp)}
                     {post.changtime > post.timestamp ? `（编辑于 ${fmtTime(post.changtime)}）` : ""}
+                    {post.editinfo ? (() => {
+                      const [ets, euser] = post.editinfo.split("|");
+                      const etsn = Number(ets);
+                      return Number.isFinite(etsn) && etsn > 0 && euser ? (
+                        <span className="text-[#ddd]">
+                          {" "}[此帖于 {fmtTime(etsn)} 由 {euser} 编辑]
+                        </span>
+                      ) : null;
+                    })() : null}
                   </span>
                   <span className="flex items-center gap-3">
+                    {isMod && post.ip ? (
+                      <span className="text-[#999]" title={`发帖IP：${post.ip}`}>
+                        IP：{post.ip}
+                      </span>
+                    ) : null}
                     {auth.user && !thread.islock && firstPost && firstPost.usrid === auth.user.userid && post.usrid !== auth.user.userid && giftMoney > 0 && !post.articlecontent.includes("[gift=") ? (
                       <button type="button" className="text-[#3083be]" data-trade="gift" data-pid={post.id}>
                         发礼金
@@ -291,6 +353,12 @@ export default async function TopicPage({
                       <Link href={`/post?edit=${post.id}`} className="text-[#3083be]">
                         编辑
                       </Link>
+                    ) : null}
+                    {isMod && post.id !== firstPost?.id ? (
+                      <span className="flex items-center gap-2">
+                        <PostManageButton pid={post.id} tid={tid} action="trash" label="回收此帖" />
+                        <PostManageButton pid={post.id} tid={tid} action="del" label="删除此帖" />
+                      </span>
                     ) : null}
                     {auth.user && auth.user.userid !== post.usrid ? (
                       <ReportButton pid={post.id} logged={true} />

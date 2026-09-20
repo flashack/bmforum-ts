@@ -4,22 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const ACTIONS: { key: string; label: string }[] = [
-  { key: "sticky", label: "置顶/取消" },
   { key: "digest", label: "加精/取消" },
   { key: "lock", label: "锁定/解锁" },
+  { key: "front", label: "提前" },
 ];
 
 export default function TopicTools({ tid, forumid }: { tid: number; forumid: number }) {
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
-  async function act(action: string, forumId?: number) {
+  async function act(action: string, forumId?: number, level?: number) {
     setBusy(true);
     try {
       const res = await fetch(`/api/threads/${tid}/manage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, forumid: forumId }),
+        body: JSON.stringify({ action, forumid: forumId, level }),
       });
       const data = (await res.json()) as { ok: boolean; deleted?: boolean; trashed?: boolean; error?: string };
       if (!data.ok) {
@@ -33,8 +33,31 @@ export default function TopicTools({ tid, forumid }: { tid: number; forumid: num
     }
   }
 
+  function sticky() {
+    const input = window.prompt(
+      "设置置顶级别（原版分区置顶）：\n0 - 取消置顶\n1 - 本版置顶\n2 - 分类置顶\n3 - 全局置顶",
+      "1"
+    );
+    if (input === null) return;
+    const level = parseInt(input, 10);
+    if (Number.isNaN(level) || level < 0 || level > 3) {
+      alert("请输入 0~3 之间的整数");
+      return;
+    }
+    void act("sticky", undefined, level);
+  }
+
   return (
     <span className="flex items-center gap-2">
+      <button
+        key="sticky"
+        type="button"
+        disabled={busy}
+        onClick={sticky}
+        className="cursor-pointer hover:underline disabled:opacity-60"
+      >
+        置顶
+      </button>
       {ACTIONS.map((a) => (
         <button
           key={a.key}

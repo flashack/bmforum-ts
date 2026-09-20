@@ -16,12 +16,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tid
   if (!auth.user) return fail("请先登录后再投票");
   if (!auth.user.canvote) return fail("您所在的用户组无权参与投票", 403);
 
+  const thread = await queryOne<{ islock: number }>("SELECT islock FROM threads WHERE tid = $1", [tid]);
+  if (!thread) return fail("主题不存在");
+  if (thread.islock === 1 || thread.islock === 3) return fail("主题已被锁定，无法投票");
+
   const poll = await queryOne<{
     options: PollOption[];
     polluser: number[] | Record<string, unknown> | string;
     maxchoose: number;
-  }>("SELECT options, polluser, maxchoose FROM polls WHERE tid = $1", [tid]);
+    deadline: number;
+    minposts: number;
+  }>("SELECT options, polluser, maxchoose, deadline, minposts FROM polls WHERE tid = $1", [tid]);
   if (!poll) return fail("该主题没有投票");
+
+  const now = Math.floor(Date.now() / 1000);
+  if (poll.deadline > 0 && now > poll.deadline) return fail("投票已截止，无法再投");
+  if (poll.minposts > 0 && auth.user.postamount < poll.minposts) {
+    return fail(`您的发帖数需达到 ${poll.minposts} 才能参与投票`);
+  }
 
   const options: PollOption[] = poll.options;
   // polluser 兼容数组 / 对象 / 字符串

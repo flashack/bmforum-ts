@@ -2,6 +2,7 @@
 -- PostgreSQL database dump
 --
 
+\restrict kjwoRdcKybdDJQvYlYZpaaGjsIU66UhDymtxRd4qVzVg6SxSbqPANJRZ2clDtYP
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -303,7 +304,8 @@ CREATE TABLE public.forumdata (
     fltitle text DEFAULT ''::text NOT NULL,
     flposter text DEFAULT ''::text NOT NULL,
     flposttime integer DEFAULT 0 NOT NULL,
-    guestpost text DEFAULT '1'::text NOT NULL
+    guestpost text DEFAULT '1'::text NOT NULL,
+    digestcount integer DEFAULT 0 NOT NULL
 );
 
 
@@ -504,7 +506,9 @@ CREATE TABLE public.polls (
     options jsonb DEFAULT '[]'::jsonb NOT NULL,
     polluser jsonb DEFAULT '[]'::jsonb NOT NULL,
     maxchoose integer DEFAULT 1 NOT NULL,
-    deadline integer DEFAULT 0 NOT NULL
+    deadline integer DEFAULT 0 NOT NULL,
+    viewafter smallint DEFAULT 0 NOT NULL,
+    minposts integer DEFAULT 0 NOT NULL
 );
 
 
@@ -523,7 +527,9 @@ CREATE TABLE public.posts (
     "timestamp" integer DEFAULT 0 NOT NULL,
     changtime integer DEFAULT 0 NOT NULL,
     posttrash smallint DEFAULT 0 NOT NULL,
-    sellbuyer text DEFAULT ''::text NOT NULL
+    sellbuyer text DEFAULT ''::text NOT NULL,
+    editinfo text DEFAULT ''::text NOT NULL,
+    ip text DEFAULT ''::text NOT NULL
 );
 
 
@@ -662,7 +668,9 @@ CREATE TABLE public.threads (
     ttagid character varying(100) DEFAULT ''::character varying NOT NULL,
     diggcount integer DEFAULT 0 NOT NULL,
     digguser text DEFAULT ''::text NOT NULL,
-    newdesc text DEFAULT ''::text NOT NULL
+    newdesc text DEFAULT ''::text NOT NULL,
+    digest smallint DEFAULT 0 NOT NULL,
+    type smallint DEFAULT 0 NOT NULL
 );
 
 
@@ -731,7 +739,8 @@ CREATE TABLE public.userlist (
     avatar text DEFAULT ''::text NOT NULL,
     sex text DEFAULT 'm'::text NOT NULL,
     birthday text DEFAULT ''::text NOT NULL,
-    online_status text DEFAULT 'online'::text NOT NULL
+    online_status text DEFAULT 'online'::text NOT NULL,
+    digestmount integer DEFAULT 0 NOT NULL
 );
 
 
@@ -1005,23 +1014,25 @@ INSERT INTO public.config VALUES ('invitereg', '0');
 -- Data for Name: forumdata; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.forumdata VALUES (20, 'forum', 'PHP / 后端开发', 'PHP、Node.js 等后端技术讨论', 2, 'bsd_fan,php老兵', 1, 2, 1, 0, 0, '从 PHP 迁移到 TypeScript 的心得', 'php老兵', 1700900000, '1');
-INSERT INTO public.forumdata VALUES (31, 'forum', '经典怀旧', '追忆老论坛、老软件与互联网记忆', 3, '月光骑士', 2, 1, 0, 0, 0, '晒出你的老论坛收藏：BMForum、Discuz、PHPWind', '月光骑士', 1700860000, '1');
-INSERT INTO public.forumdata VALUES (11, 'forum', '意见反馈', '对论坛的建议与意见反馈专区', 1, 'admin,bsd_fan', 2, 2, 0, 1, 0, '建议增加夜间模式', '月光骑士', 1700660000, '0');
-INSERT INTO public.forumdata VALUES (30, 'forum', '灌水乐园', '轻松一刻，畅所欲言', 3, '水贴之王', 1, 3, 1, 2, 0, '交易标签功能演示（出售/礼金/求赏）', 'bsd_fan', 1789919412, '1');
-INSERT INTO public.forumdata VALUES (1, 'category', '站务管理', '论坛公告与管理事务', 0, '', 1, 0, 0, 0, 0, '', '', 0, '1');
-INSERT INTO public.forumdata VALUES (2, 'category', '技术交流', '程序开发与设计技术', 0, '', 2, 0, 0, 0, 0, '', '', 0, '1');
-INSERT INTO public.forumdata VALUES (3, 'category', '休闲娱乐', '灌水与闲聊', 0, '', 3, 0, 0, 0, 0, '', '', 0, '1');
-INSERT INTO public.forumdata VALUES (33, 'forum', 'Linux & Shell', '命令行与脚本玩家的角落', 20, 'admin', 23, 0, 0, 0, 0, '', '', 0, '1');
-INSERT INTO public.forumdata VALUES (10, 'forum', '公告与规则', '论坛最新公告、制度与须知，发帖前必读', 1, 'admin', 1, 2, 3, 1, 0, '[公告] BMForum 复刻版正式上线', 'admin', 1700990000, '0');
-INSERT INTO public.forumdata VALUES (21, 'forum', '前端与设计', 'HTML/CSS/JS、界面设计与用户体验', 2, 'bsd_fan', 2, 1, 0, 0, 0, '用现代 CSS 复刻 Bootstrap 2 时代界面', 'bsd_fan', 1700800000, '1');
-INSERT INTO public.forumdata VALUES (22, 'forum', '数据库专区', 'MySQL、PostgreSQL 等数据库技术', 2, 'php老兵', 3, 1, 1, 3, 0, 'PostgreSQL 17 有哪些值得升级的新特性', 'php老兵', 1700850000, '1');
+INSERT INTO public.forumdata VALUES (20, 'forum', 'PHP / 后端开发', 'PHP、Node.js 等后端技术讨论', 2, 'bsd_fan,php老兵', 1, 2, 1, 0, 0, '从 PHP 迁移到 TypeScript 的心得', 'php老兵', 1700900000, '1', 0);
+INSERT INTO public.forumdata VALUES (31, 'forum', '经典怀旧', '追忆老论坛、老软件与互联网记忆', 3, '月光骑士', 2, 1, 0, 0, 0, '晒出你的老论坛收藏：BMForum、Discuz、PHPWind', '月光骑士', 1700860000, '1', 0);
+INSERT INTO public.forumdata VALUES (30, 'forum', '灌水乐园', '轻松一刻，畅所欲言', 3, '水贴之王', 1, 3, 1, 2, 0, '交易标签功能演示（出售/礼金/求赏）', 'bsd_fan', 1789919412, '1', 0);
+INSERT INTO public.forumdata VALUES (11, 'forum', '意见反馈', '对论坛的建议与意见反馈专区', 1, 'admin,bsd_fan', 2, 2, 0, 1, 0, '建议增加夜间模式', '月光骑士', 1700660000, '0', 0);
+INSERT INTO public.forumdata VALUES (1, 'category', '站务管理', '论坛公告与管理事务', 0, '', 1, 0, 0, 0, 0, '', '', 0, '1', 0);
+INSERT INTO public.forumdata VALUES (2, 'category', '技术交流', '程序开发与设计技术', 0, '', 2, 0, 0, 0, 0, '', '', 0, '1', 0);
+INSERT INTO public.forumdata VALUES (3, 'category', '休闲娱乐', '灌水与闲聊', 0, '', 3, 0, 0, 0, 0, '', '', 0, '1', 0);
+INSERT INTO public.forumdata VALUES (33, 'forum', 'Linux & Shell', '命令行与脚本玩家的角落', 20, 'admin', 23, 0, 0, 0, 0, '', '', 0, '1', 0);
+INSERT INTO public.forumdata VALUES (10, 'forum', '公告与规则', '论坛最新公告、制度与须知，发帖前必读', 1, 'admin', 1, 2, 3, 1, 0, '[公告] BMForum 复刻版正式上线', 'admin', 1700990000, '0', 0);
+INSERT INTO public.forumdata VALUES (21, 'forum', '前端与设计', 'HTML/CSS/JS、界面设计与用户体验', 2, 'bsd_fan', 2, 1, 0, 0, 0, '用现代 CSS 复刻 Bootstrap 2 时代界面', 'bsd_fan', 1700800000, '1', 0);
+INSERT INTO public.forumdata VALUES (22, 'forum', '数据库专区', 'MySQL、PostgreSQL 等数据库技术', 2, 'php老兵', 3, 1, 1, 3, 0, 'PostgreSQL 17 有哪些值得升级的新特性', 'php老兵', 1700850000, '1', 0);
 
 
 --
 -- Data for Name: forumlog; Type: TABLE DATA; Schema: public; Owner: -
 --
 
+INSERT INTO public.forumlog VALUES (7, 30, 1789921357, '月光骑士', '编辑帖子', '细节冒烟·投票主题（#24）');
+INSERT INTO public.forumlog VALUES (8, 30, 1789921630, 'bsd_fan', '编辑帖子', '交易标签功能演示（出售/礼金/求赏）（#22）');
 
 
 --
@@ -1052,63 +1063,67 @@ INSERT INTO public.lastest VALUES (1, 11, 27, 5, 2, 1700990000, 47, 'admin', 1, 
 
 INSERT INTO public.notification VALUES (1, 2, 'bsd_fan', 3, 'reply', '回复了你的主题「Node.js 里怎么优雅地写数据库迁移脚本」', 9, 1700890000, 0);
 INSERT INTO public.notification VALUES (2, 4, 'php老兵', 2, 'digg', '觉得你的帖子很赞', 3, 1700910000, 0);
+INSERT INTO public.notification VALUES (3, 1, 'admin', 3, 'reply', '回复了您的主题「细节冒烟·投票主题」', 16, 1789921171, 0);
+INSERT INTO public.notification VALUES (4, 1, 'admin', 3, 'reply', '回复了您的主题「细节冒烟·投票主题」', 16, 1789921417, 0);
 
 
 --
 -- Data for Name: onlinestat; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789918738, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789918828, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789918979, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919018, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919171, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919212, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919237, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919379, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919412, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919428, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919428, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919436, '127.0.0.1', '/topic/15', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919436, '127.0.0.1', '/forums/30', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919470, '127.0.0.1', '/topic/15', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789919483, '127.0.0.1', '/forums/30', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921372, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921375, '127.0.0.1', '/forums/30', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921378, '127.0.0.1', '/topic/16', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921400, '127.0.0.1', '/topic/16', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921400, '127.0.0.1', '/topic/16', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921417, '127.0.0.1', '/topic/16', 0);
+INSERT INTO public.onlinestat VALUES ('admin', 1, 1789921418, '127.0.0.1', '/topic/16', 3);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921618, '127.0.0.1', '/topic/15', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921634, '127.0.0.1', '/topic/15', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921635, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921639, '127.0.0.1', '/topic/15', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921645, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921649, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921654, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921659, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921664, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921664, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921668, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789921065, '127.0.0.1', '/', 0);
 
 
 --
 -- Data for Name: polls; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.polls VALUES (6, '[{"text": "Discuz!", "votes": 2}, {"text": "PHPWind", "votes": 1}, {"text": "BMForum", "votes": 3}, {"text": "phpBB", "votes": 0}, {"text": "动网论坛", "votes": 1}]', '[1, 2, 3, 4, 5, 2, 3]', 2, 1800000000);
+INSERT INTO public.polls VALUES (6, '[{"text": "Discuz!", "votes": 2}, {"text": "PHPWind", "votes": 1}, {"text": "BMForum", "votes": 3}, {"text": "phpBB", "votes": 0}, {"text": "动网论坛", "votes": 1}]', '[1, 2, 3, 4, 5, 2, 3]', 2, 1800000000, 0, 0);
 
 
 --
 -- Data for Name: posts; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.posts VALUES (2, 1, 10, '', '月光骑士', 3, '签名档功能什么时候上？', 1700020000, 0, 0, '');
-INSERT INTO public.posts VALUES (3, 1, 10, 'RE: 上线公告', '水贴之王', 5, '前排围观，灌水乐园走起！', 1700030000, 0, 0, '');
-INSERT INTO public.posts VALUES (4, 1, 10, '', 'php老兵', 4, 'BMBCode 解析器写得很扎实，[url=https://www.bmforum.com]原版官网[/url]的精神续作。', 1700990000, 0, 0, '');
-INSERT INTO public.posts VALUES (5, 2, 10, '', '水贴之王', 5, '收到，一定遵守规范。', 1699010000, 0, 0, '');
-INSERT INTO public.posts VALUES (6, 3, 20, 'RE: 迁移心得', 'bsd_fan', 2, '同感。原生 SQL + 参数化查询在服务端组件里直接 await，太爽了。', 1700910000, 0, 0, '');
-INSERT INTO public.posts VALUES (7, 3, 20, '', '月光骑士', 3, '请问连接池需要单例吗？', 1700920000, 0, 0, '');
-INSERT INTO public.posts VALUES (8, 3, 20, '', 'php老兵', 4, '需要的，全局 Pool 复用即可，参考我的帖子里的写法。', 1700900000, 0, 0, '');
-INSERT INTO public.posts VALUES (9, 4, 22, 'RE: PG 17', 'admin', 1, '我们论坛就是 PG 17 跑的，稳。', 1700851000, 0, 0, '');
-INSERT INTO public.posts VALUES (10, 4, 22, '', '月光骑士', 3, '还在 16，观察一波再说。', 1700852000, 0, 0, '');
-INSERT INTO public.posts VALUES (11, 5, 21, '', '月光骑士', 3, '蓝条 #3083BE 一出来，DNA 动了。', 1700801000, 0, 0, '');
-INSERT INTO public.posts VALUES (12, 6, 30, '', 'php老兵', 4, 'Discuz！当年大学 BBS 全靠它。', 1700881000, 0, 0, '');
-INSERT INTO public.posts VALUES (13, 6, 30, '', '月光骑士', 3, 'PHPWind 也有，界面很清新。', 1700882000, 0, 0, '');
-INSERT INTO public.posts VALUES (14, 7, 31, '', 'php老兵', 4, 'BMForum 的标签功能当年是国内首创，超前了。', 1700861000, 0, 0, '');
-INSERT INTO public.posts VALUES (15, 10, 11, '', 'admin', 1, '收到建议，已列入计划，感谢反馈。', 1700661000, 0, 0, '');
-INSERT INTO public.posts VALUES (1, 1, 10, '', 'bsd_fan', 2, '恭喜恭喜！BSD12 主题还原度很高，梦回 2010。', 1700010000, 1700010000, 0, '');
-INSERT INTO public.posts VALUES (22, 15, 30, '交易标签功能演示（出售/礼金/求赏）', 'bsd_fan', 2, '本帖演示原版 BMForum 的三大交易标签。
-
-[gift=10]礼金演示：楼主可以用 [gift=金额] 给回复的会员发放礼金，点击下方帖子右下角的“发礼金”即可。[/gift]', 1789919379, 1789919379, 0, '');
+INSERT INTO public.posts VALUES (2, 1, 10, '', '月光骑士', 3, '签名档功能什么时候上？', 1700020000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (3, 1, 10, 'RE: 上线公告', '水贴之王', 5, '前排围观，灌水乐园走起！', 1700030000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (4, 1, 10, '', 'php老兵', 4, 'BMBCode 解析器写得很扎实，[url=https://www.bmforum.com]原版官网[/url]的精神续作。', 1700990000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (5, 2, 10, '', '水贴之王', 5, '收到，一定遵守规范。', 1699010000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (6, 3, 20, 'RE: 迁移心得', 'bsd_fan', 2, '同感。原生 SQL + 参数化查询在服务端组件里直接 await，太爽了。', 1700910000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (7, 3, 20, '', '月光骑士', 3, '请问连接池需要单例吗？', 1700920000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (8, 3, 20, '', 'php老兵', 4, '需要的，全局 Pool 复用即可，参考我的帖子里的写法。', 1700900000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (9, 4, 22, 'RE: PG 17', 'admin', 1, '我们论坛就是 PG 17 跑的，稳。', 1700851000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (10, 4, 22, '', '月光骑士', 3, '还在 16，观察一波再说。', 1700852000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (11, 5, 21, '', '月光骑士', 3, '蓝条 #3083BE 一出来，DNA 动了。', 1700801000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (12, 6, 30, '', 'php老兵', 4, 'Discuz！当年大学 BBS 全靠它。', 1700881000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (13, 6, 30, '', '月光骑士', 3, 'PHPWind 也有，界面很清新。', 1700882000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (14, 7, 31, '', 'php老兵', 4, 'BMForum 的标签功能当年是国内首创，超前了。', 1700861000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (15, 10, 11, '', 'admin', 1, '收到建议，已列入计划，感谢反馈。', 1700661000, 0, 0, '', '', '');
+INSERT INTO public.posts VALUES (1, 1, 10, '', 'bsd_fan', 2, '恭喜恭喜！BSD12 主题还原度很高，梦回 2010。', 1700010000, 1700010000, 0, '', '', '');
 INSERT INTO public.posts VALUES (23, 15, 30, '交易标签功能演示（出售/礼金/求赏）', 'bsd_fan', 2, '出售与求赏演示。
 
 [sell=20]这段是付费内容：购买后才能看到（演示用，作者可在帖子下方退款）。[/sell]
 
-[beg]觉得有用的话，欢迎打赏楼主～[/beg]', 1789919412, 1789919412, 0, '');
+[beg]觉得有用的话，欢迎打赏楼主～[/beg]', 1789919412, 1789919412, 0, '', '', '');
+INSERT INTO public.posts VALUES (22, 15, 30, '交易标签功能演示（出售/礼金/求赏）', 'bsd_fan', 2, '[gift=10]感谢大家参与本版块的交易功能测试！[/gift]', 1789919379, 1789921630, 0, '', '1789921630|bsd_fan', '');
 
 
 --
@@ -1124,6 +1139,26 @@ INSERT INTO public.primsg VALUES (7, 'admin', 'admin', 'inv_reg_ok', 'probe', 'p
 
 
 --
+-- Data for Name: sessions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+INSERT INTO public.sessions VALUES ('6c2d813c2fea63c17035aaf7fca51bd1ceaa370649677b77', 1, 1789915328, 1789915328, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('10916ed22c47a3b5b7053de4afef75cca5768b6da35fc1ac', 2, 1789918746, 1789918746, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('51db83a5294a6672c69c2e7414b9ca25fbc30dbe7ac38585', 3, 1789918747, 1789918747, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('e3a440e7b41934a0464e13a39fead23caa4c5b335ee5a254', 2, 1789918828, 1789918828, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('6535d48a55b8f05c3df5990909970215ac87bebd31527be0', 3, 1789918828, 1789918828, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('f395ebd7ce9c3da0abe5507342e8db7ce1453b1efb42bf60', 2, 1789918979, 1789918979, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('ae13711dc7fde332b7ad126c9c94a944b33dc93ce966b84f', 1, 1789918979, 1789918979, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('94a41bdba604ba812da1a195f66d2ae2978294a45ff56a65', 1, 1789919172, 1789919172, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('b8724b0ea68ef2a6264072e8354b296edce7900d9526f7a4', 2, 1789919212, 1789919212, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('ee42e887e710cefacdeb9550490ebf52c6851fc51bf3093f', 2, 1789919237, 1789919237, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('74a51e763051b17ca4f5b77a46274acf95ef3333c6fce2d9', 2, 1789919379, 1789919379, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('17cc4acccd3e517de49ff13b79ed2be00f36214c3c045d4d', 1, 1789921141, 1789921141, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('d74c7584d64842a9df2211f1989d02c8671f905b84a41049', 3, 1789921141, 1789921141, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('5ec242b9eab7f6ecccac40fb55a6a37a8931fbfcffda6500', 2, 1789921630, 1789921630, '127.0.0.1');
+
+
+--
 -- Data for Name: tags; Type: TABLE DATA; Schema: public; Owner: -
 --
 
@@ -1136,8 +1171,6 @@ INSERT INTO public.tags VALUES (7, '灌水', 2);
 INSERT INTO public.tags VALUES (17, '冒烟', 1);
 INSERT INTO public.tags VALUES (1, 'BMForum', 2);
 INSERT INTO public.tags VALUES (8, '公告', 2);
-INSERT INTO public.tags VALUES (18, '演示', 1);
-INSERT INTO public.tags VALUES (19, '交易', 1);
 
 
 --
@@ -1161,29 +1194,27 @@ INSERT INTO public.thread_tags VALUES (9, 3);
 INSERT INTO public.thread_tags VALUES (10, 2);
 INSERT INTO public.thread_tags VALUES (1, 1);
 INSERT INTO public.thread_tags VALUES (1, 8);
-INSERT INTO public.thread_tags VALUES (15, 18);
-INSERT INTO public.thread_tags VALUES (15, 19);
 
 
 --
 -- Data for Name: threads; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.threads VALUES (8, 30, 0, 0, '今天天气不错，出来冒个泡', '水一水，涨积分。', '水贴之王', 5, 1700900000, 1700910000, 88, 0, '', 0, 0, '灌水', '7', 1, '', '');
-INSERT INTO public.threads VALUES (15, 30, 0, 0, '交易标签功能演示（出售/礼金/求赏）', '本帖演示原版 BMForum 的三大交易标签。
-
-[gift=10]礼金演示：楼主可以用 [gift=金额] 给回复的会员发放礼金，点击下方帖子右下角的“发礼金”即可。[/gift]', 'bsd_fan', 2, 1789919379, 1789919412, 3, 1, 'bsd_fan', 0, 0, '演示,交易', '', 0, '', '原版 [sell] [gift] [beg] 标签效果展示');
-INSERT INTO public.threads VALUES (9, 20, 0, 0, 'Node.js 里怎么优雅地写数据库迁移脚本', '用纯 SQL 文件 + 启动脚本执行，比 ORM 迁移更直观，大家怎么看？', '月光骑士', 3, 1700850000, 1700890000, 68, 0, '', 0, 0, 'PostgreSQL,PHP', '4,3', 2, '', '');
-INSERT INTO public.threads VALUES (2, 10, 1, 0, '[公告] 论坛发帖规范 v2', '为维护论坛秩序，请遵守以下规范：[quote]1. 禁止灌水广告；2. 标题明确；3. 尊重他人[/quote]违规将被扣分处理。', '水贴之王', 5, 1699000000, 1699000000, 263, 1, '水贴之王', 0, 0, '公告', '8', 5, '', '');
+INSERT INTO public.threads VALUES (8, 30, 0, 0, '今天天气不错，出来冒个泡', '水一水，涨积分。', '水贴之王', 5, 1700900000, 1700910000, 88, 0, '', 0, 0, '灌水', '7', 1, '', '', 0, 0);
+INSERT INTO public.threads VALUES (1, 10, 0, 0, '[公告] BMForum 复刻版正式上线', '经过努力，BMForum 7 的 TypeScript + PostgreSQL 复刻版正式上线！[b]功能包括：[/b][list]分类版块、主题回帖、BMBCode、标签、投票、短消息、在线列表、后台管理[/list]欢迎体验。', 'bsd_fan', 2, 1700000000, 1700000000, 376, 4, '月光骑士', 0, 0, 'BMForum,公告', '1,8', 12, '', '', 1, 0);
+INSERT INTO public.threads VALUES (6, 30, 0, 0, '[投票] 你最早用的论坛程序是哪个？', '来投个票，看看大家都是从什么年代过来的！', 'php老兵', 4, 1700750000, 1700880000, 313, 2, '月光骑士', 0, 1, '灌水,怀旧', '7,6', 15, '', '', 0, 1);
+INSERT INTO public.threads VALUES (9, 20, 0, 0, 'Node.js 里怎么优雅地写数据库迁移脚本', '用纯 SQL 文件 + 启动脚本执行，比 ORM 迁移更直观，大家怎么看？', '月光骑士', 3, 1700850000, 1700890000, 68, 0, '', 0, 0, 'PostgreSQL,PHP', '4,3', 2, '', '', 0, 0);
+INSERT INTO public.threads VALUES (2, 10, 1, 0, '[公告] 论坛发帖规范 v2', '为维护论坛秩序，请遵守以下规范：[quote]1. 禁止灌水广告；2. 标题明确；3. 尊重他人[/quote]违规将被扣分处理。', '水贴之王', 5, 1699000000, 1699000000, 263, 1, '水贴之王', 0, 0, '公告', '8', 5, '', '', 0, 0);
 INSERT INTO public.threads VALUES (3, 20, 0, 0, '从 PHP 迁移到 TypeScript 的心得', '十年 PHP 老兵表示：[b]TypeScript 的类型系统真的香[/b]。用 node-postgres 原生驱动连接 PG，配合 Next.js 服务端组件，开发体验拉满。附上连接池代码：[code]import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const { rows } = await pool.query("SELECT * FROM threads LIMIT 10");[/code]', 'bsd_fan', 2, 1700500000, 1700900000, 189, 3, 'bsd_fan', 0, 0, 'PHP,PostgreSQL', '3,4', 8, '', '');
-INSERT INTO public.threads VALUES (4, 22, 0, 0, 'PostgreSQL 17 有哪些值得升级的新特性', 'PG 17 的 VACUUM 性能提升、MERGE 增强都很实用。大家的生产环境都升级了吗？', 'admin', 1, 1700600000, 1700850000, 143, 2, 'admin', 0, 0, 'PostgreSQL', '4', 6, '', '');
-INSERT INTO public.threads VALUES (5, 21, 0, 0, '用现代 CSS 复刻 Bootstrap 2 时代界面', '渐变按钮、圆角输入框、table 布局……复刻老论坛界面比想象中有趣。核心是把 .announcement 蓝条还原出来。', '月光骑士', 3, 1700700000, 1700800000, 98, 1, '月光骑士', 0, 0, '前端,怀旧', '5,6', 4, '', '');
-INSERT INTO public.threads VALUES (6, 30, 0, 0, '[投票] 你最早用的论坛程序是哪个？', '来投个票，看看大家都是从什么年代过来的！', 'php老兵', 4, 1700750000, 1700880000, 313, 2, '月光骑士', 0, 1, '灌水,怀旧', '7,6', 15, '', '');
-INSERT INTO public.threads VALUES (7, 31, 0, 0, '晒出你的老论坛收藏：BMForum、Discuz、PHPWind', '那些年的三大 PHP 论坛程序，谁还记得「主题随意贴」这个功能？', 'php老兵', 4, 1700800000, 1700860000, 176, 1, 'php老兵', 0, 0, '怀旧,BMForum,经典论坛', '6,1,2', 9, '', '');
-INSERT INTO public.threads VALUES (10, 11, 0, 0, '建议增加夜间模式', '如题，晚上看论坛太亮了。', 'admin', 1, 1700650000, 1700660000, 45, 1, 'admin', 0, 0, '经典论坛', '2', 3, '', '');
-INSERT INTO public.threads VALUES (1, 10, 2, 0, '[公告] BMForum 复刻版正式上线', '经过努力，BMForum 7 的 TypeScript + PostgreSQL 复刻版正式上线！[b]功能包括：[/b][list]分类版块、主题回帖、BMBCode、标签、投票、短消息、在线列表、后台管理[/list]欢迎体验。', 'bsd_fan', 2, 1700000000, 1700000000, 376, 4, '月光骑士', 0, 0, 'BMForum,公告', '1,8', 12, '', '');
+const { rows } = await pool.query("SELECT * FROM threads LIMIT 10");[/code]', 'bsd_fan', 2, 1700500000, 1700900000, 189, 3, 'bsd_fan', 0, 0, 'PHP,PostgreSQL', '3,4', 8, '', '', 0, 0);
+INSERT INTO public.threads VALUES (4, 22, 0, 0, 'PostgreSQL 17 有哪些值得升级的新特性', 'PG 17 的 VACUUM 性能提升、MERGE 增强都很实用。大家的生产环境都升级了吗？', 'admin', 1, 1700600000, 1700850000, 143, 2, 'admin', 0, 0, 'PostgreSQL', '4', 6, '', '', 0, 0);
+INSERT INTO public.threads VALUES (5, 21, 0, 0, '用现代 CSS 复刻 Bootstrap 2 时代界面', '渐变按钮、圆角输入框、table 布局……复刻老论坛界面比想象中有趣。核心是把 .announcement 蓝条还原出来。', '月光骑士', 3, 1700700000, 1700800000, 98, 1, '月光骑士', 0, 0, '前端,怀旧', '5,6', 4, '', '', 0, 0);
+INSERT INTO public.threads VALUES (7, 31, 0, 0, '晒出你的老论坛收藏：BMForum、Discuz、PHPWind', '那些年的三大 PHP 论坛程序，谁还记得「主题随意贴」这个功能？', 'php老兵', 4, 1700800000, 1700860000, 176, 1, 'php老兵', 0, 0, '怀旧,BMForum,经典论坛', '6,1,2', 9, '', '', 0, 0);
+INSERT INTO public.threads VALUES (10, 11, 0, 0, '建议增加夜间模式', '如题，晚上看论坛太亮了。', 'admin', 1, 1700650000, 1700660000, 45, 1, 'admin', 0, 0, '经典论坛', '2', 3, '', '', 0, 0);
+INSERT INTO public.threads VALUES (15, 30, 0, 0, '交易标签功能演示（出售/礼金/求赏）', '本帖演示原版 BMForum 的三大交易标签。
+
+[gift=10]礼金演示：楼主可以用 [gift=金额] 给回复的会员发放礼金，点击下方帖子右下角的“发礼金”即可。[/gift]', 'bsd_fan', 2, 1789919379, 1789921630, 6, 1, 'bsd_fan', 0, 0, '', '', 0, '', '演示出售、礼金、求赏三种交易标签的实际效果。', 0, 0);
 
 
 --
@@ -1201,11 +1232,11 @@ INSERT INTO public.usergroup VALUES (1, '注册会员', 'member.gif', 1, 1, 1, 1
 -- Data for Name: userlist; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.userlist VALUES (1, 'admin', '6cfeb1231cb191068c8ddd4d13e003c65db3c30c9fe7835854c8ca71f0fef54c', 'e188080bae72e078', 'admin@bmforum.dev', 3, '2005-08-01', '论坛的管理员，有问题请找我。', '', '管理后台', '负责论坛日常维护与安全管理。', '管理员', 132, 9999, 50011, 1789919172, 1789912129, '', 'm', '1980-01-01', 'online');
-INSERT INTO public.userlist VALUES (4, 'php老兵', 'ba1aad78143ff79ea54d0ce560f614d1e9df4411895585e8b2b29f8513c2eeb3', 'b19780dd588bf92a', 'vet@bmforum.dev', 1, '2008-06-30', 'PHP 是世界上最好的语言（狗头）', '', '北京', '写了十年 PHP 的老码农。', '', 67, 2300, 8800, 0, 0, '', 'm', '1983-04-18', 'online');
-INSERT INTO public.userlist VALUES (5, '水贴之王', 'f985c790e3b1be6b47acfa0f01b7a3c5819315d76755943378f77a7264ef03a4', '02d97f9930d30498', 'water@bmforum.dev', 1, '2015-02-14', '灌水使我快乐。', '', '成都', '专业灌水二十年。', '', 210, 800, 3200, 0, 0, '', 'm', '1995-12-05', 'online');
-INSERT INTO public.userlist VALUES (3, '月光骑士', 'ba7b727f23f1f124b85fabcb7e4ec02211d3ac420068539db35ba6c35904aac7', 'e36a14496163a9b4', 'moon@bmforum.dev', 1, '2010-11-02', '潜水多年，偶尔冒泡。', '', '广州', '普通坛友一枚。', '', 45, 1500, 5600, 1789918828, 0, '', 'f', '1990-09-12', 'online');
-INSERT INTO public.userlist VALUES (2, 'bsd_fan', '86fc166b5d369a32e44ade07d8169da349350020e19dc2b9ddd3f3bbb7ab3e1c', '193e9b0d3b521e83', 't@t.io', 1, '2007-03-15', '', '', '测试城市', '老论坛程序爱好者，收集各种经典皮肤。', '', 88, 3200, 11989, 1789919379, 1789919412, '/api/attachment/3', '男', '1990-01-01', 'online');
+INSERT INTO public.userlist VALUES (1, 'admin', '6cfeb1231cb191068c8ddd4d13e003c65db3c30c9fe7835854c8ca71f0fef54c', 'e188080bae72e078', 'admin@bmforum.dev', 3, '2005-08-01', '论坛的管理员，有问题请找我。', '', '管理后台', '负责论坛日常维护与安全管理。', '管理员', 132, 9999, 50011, 1789921141, 1789919172, '', 'm', '1980-01-01', 'online', 0);
+INSERT INTO public.userlist VALUES (4, 'php老兵', 'ba1aad78143ff79ea54d0ce560f614d1e9df4411895585e8b2b29f8513c2eeb3', 'b19780dd588bf92a', 'vet@bmforum.dev', 1, '2008-06-30', 'PHP 是世界上最好的语言（狗头）', '', '北京', '写了十年 PHP 的老码农。', '', 67, 2300, 8800, 0, 0, '', 'm', '1983-04-18', 'online', 0);
+INSERT INTO public.userlist VALUES (5, '水贴之王', 'f985c790e3b1be6b47acfa0f01b7a3c5819315d76755943378f77a7264ef03a4', '02d97f9930d30498', 'water@bmforum.dev', 1, '2015-02-14', '灌水使我快乐。', '', '成都', '专业灌水二十年。', '', 210, 800, 3200, 0, 0, '', 'm', '1995-12-05', 'online', 0);
+INSERT INTO public.userlist VALUES (3, '月光骑士', 'ba7b727f23f1f124b85fabcb7e4ec02211d3ac420068539db35ba6c35904aac7', 'e36a14496163a9b4', 'moon@bmforum.dev', 1, '2010-11-02', '潜水多年，偶尔冒泡。', '', '广州', '普通坛友一枚。', '', 47, 1500, 5600, 1789921141, 1789918828, '', 'f', '1990-09-21', 'online', 0);
+INSERT INTO public.userlist VALUES (2, 'bsd_fan', '86fc166b5d369a32e44ade07d8169da349350020e19dc2b9ddd3f3bbb7ab3e1c', '193e9b0d3b521e83', 't@t.io', 1, '2007-03-15', '', '', '测试城市', '老论坛程序爱好者，收集各种经典皮肤。', '', 88, 3200, 11989, 1789921630, 1789919412, '/api/attachment/3', '男', '1990-01-01', 'online', 0);
 
 
 --
@@ -1269,7 +1300,7 @@ SELECT pg_catalog.setval('public.forumdata_id_seq', 37, true);
 -- Name: forumlog_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.forumlog_id_seq', 2, true);
+SELECT pg_catalog.setval('public.forumlog_id_seq', 8, true);
 
 
 --
@@ -1290,14 +1321,14 @@ SELECT pg_catalog.setval('public.ipban_id_seq', 2, true);
 -- Name: notification_nid_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.notification_nid_seq', 2, true);
+SELECT pg_catalog.setval('public.notification_nid_seq', 4, true);
 
 
 --
 -- Name: posts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.posts_id_seq', 23, true);
+SELECT pg_catalog.setval('public.posts_id_seq', 29, true);
 
 
 --
@@ -1318,7 +1349,7 @@ SELECT pg_catalog.setval('public.tags_tagid_seq', 19, true);
 -- Name: threads_tid_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.threads_tid_seq', 15, true);
+SELECT pg_catalog.setval('public.threads_tid_seq', 19, true);
 
 
 --
@@ -1669,4 +1700,5 @@ CREATE INDEX idx_userlist_group ON public.userlist USING btree (usergroup);
 -- PostgreSQL database dump complete
 --
 
+\unrestrict kjwoRdcKybdDJQvYlYZpaaGjsIU66UhDymtxRd4qVzVg6SxSbqPANJRZ2clDtYP
 

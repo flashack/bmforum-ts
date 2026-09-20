@@ -5,7 +5,7 @@
 BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功能实现）。
 核心模块与关键文件：
 
-- **BMBCode 渲染**：`src/lib/bmbcode.ts` —— parseBmbCode(content, attachMap, tradeCtx?)；交易标签 [sell=金额]/[gift=金额]/[beg] 需要 TradeCtx（帖子买卖家、beg 流水、金钱单位）才能渲染遮罩/按钮；表情 [s:xxx] 走 EMOTICONS
+- **BMBCode 渲染**：`src/lib/bmbcode.ts` —— parseBmbCode(content, attachMap, tradeCtx?, viewerCtx?)；交易标签 [sell=金额]/[pay=金额]/[gift=金额]/[beg] 需要 TradeCtx（帖子买卖家、beg 流水、金钱单位）才能渲染遮罩/按钮；隐藏类标签 [post]/[hpost=N]/[hmoney=M]/[hide=积分] 走 ViewerCtx（hasReplied/postamount/money/point/privileged）条件显示，作者/版主/管理员恒可见，遮罩不泄露原文；另有 [align]/[sub]/[sup]/[glow=W,color]/[shadow=W,color]；表情 [s:xxx] 走 EMOTICONS
 - **交易（原版 sell.php）**：API `src/app/api/posts/[id]/trade/route.ts`，action=buy/refund/gift/beg；钱流：购买扣买家给作者、退款全额退买家、礼金由主题作者发给回复作者（每作者一次）、求赏捐给帖子作者；流水表 beg（id = 帖子id+"1"/"3"、主题id+"2"），posts.sellbuyer 存买家 userid 逗号列表
 - **帖子编辑（原版 post.php modify）**：API `src/app/api/posts/[id]/edit`，页面 `/post?edit=帖子id`（首帖可改标题/主题简介 newdesc/标签，同步 thread_tags 计数）
 - **主题简介**：threads.newdesc，发帖/编辑表单字段，版块主题列表标题下显示
@@ -13,6 +13,11 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **验证码（原版 authimg.php）**：`src/lib/captcha.ts`（无状态 HMAC token，SECRET=BMF_CAPTCHA_SECRET||DATABASE_URL），GET /api/captcha，注册接口强制校验
 - **后台管理** `/admin`：版块/公告/用户/用户组/回收站/敏感词/IP封禁/邀请/站点设置(bbs_config)/禁注名单(banname)/附件管理/日志(adminlog+forumlog)/缓存重建；面板组件在 `src/components/bmf/admin-panels.tsx`（客户端统一 POST {action,...}，路由需同时支持 POST action 分支）
 - **站点设置**：bbs_config 表（bbs_title/bbs_des/welcomemess/closereg/moneyunit/perpage）；layout 读 bbs_title，主题页读 perpage，注册读 closereg，交易渲染读 moneyunit
+- **投票系统（原版 vote.php/poll.htm）**：polls.setting 含 maxchoose/viewafter/deadline/minposts；POST `/api/threads/[tid]/vote` {choices:[...]}（登录/canvote/未锁定/未投过/多选上限/到期/最低发帖数校验）；列表图标 threads.type=1；帖子页 PollBox（viewafter 未投不显结果、参与者下拉、到期截止、比例条）；发帖表单投票设置（单选/多选/最多可选/投票后可见/到期日/最低发帖）
+- **主题管理（原版 manage.php/manage2.php）**：POST `/api/threads/[tid]/manage` action=sticky(level 0-3 分级置顶)/digest(加精联动作者 digestmount±1+版块 digestcount±1)/lock/front(提前)/move/copy(复制主题+计数)/trash/delete(楼主可自删 0 回复主题并扣作者积分)；单帖管理 POST `/api/posts/[id]/manage` action=trash/del/recover（posttrash 列，版主在帖内可见"恢复"）；帖子页 TopicTools 工具栏
+- **帖子细节**：posts.editinfo（"时间戳|用户名"，渲染 `[此帖于 T 由 X 编辑]`）；posts.ip（发帖 IP，仅版主/管理员可见）；发帖/回复/编辑记录 IP；PostEditor 交易复选框（出售金额/礼金金额/求赏，自动包裹 [pay=]/[gift=]/[beg]）
+- **首页**：在线列表（whosonline）+ 今日生日块（userlist.birthday 匹配当天 MM-DD，显示 名字(年龄)）
+- **短消息（原版 messenger.php）**：inbox/outbox + action=clear 清空信箱（ClearBoxButton）
 - **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`；结构 `db/schema.sql`（生产首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后需重新 pg_dump 导出）；生产环境由 `scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底）
 
 ### 版本技术栈
