@@ -4,6 +4,8 @@ import { queryOne, query } from "@/lib/db";
 import NaviBar from "@/components/bmf/navi-bar";
 import { avatarUrl, groupName, groupColor, fmtNumber } from "@/lib/format";
 import { parseBmbCode } from "@/lib/bmbcode";
+import { getAuth } from "@/lib/auth";
+import ContactQuickActions from "@/components/bmf/contact-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,9 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
   const { uid } = await params;
   const id = Number(uid);
   if (!Number.isInteger(id)) notFound();
+
+  const auth = await getAuth();
+  const isSelf = auth.user?.userid === id;
 
   const user = await queryOne<{
     userid: number;
@@ -112,13 +117,14 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
                 "—"
               )}
             </div>
-            <div className="col-span-2 mt-1 flex gap-3 text-xs">
+            <div className="col-span-2 mt-1 flex flex-wrap items-center gap-3 text-xs">
               <Link href={`/messenger?to=${encodeURIComponent(user.username)}`} className="bmf-btn !py-0.5 !text-xs">
                 发送短消息
               </Link>
               <Link href={`/search?author=${encodeURIComponent(user.username)}`} className="bmf-btn !py-0.5 !text-xs">
                 搜索TA的帖子
               </Link>
+              {isSelf ? null : <ContactQuickActions username={user.username} />}
             </div>
           </div>
         </div>

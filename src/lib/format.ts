@@ -14,6 +14,14 @@ export function fmtDate(ts: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
+/** 完整日期时间（原版 getfulldate：Y-m-d H:i:s） */
+export function fmtFullDate(ts: number): string {
+  if (!ts) return "";
+  const d = new Date(ts * 1000);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
 /** 相对时间（原版风格的简洁表达） */
 export function fmtRelative(ts: number): string {
   if (!ts) return "从未";

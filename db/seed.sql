@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 7hpeXATBqr6E8cP6yby4Q00IhtcHMoRyn05bWBQQEB1le1T3coeIvZpV364KEcJ
+\restrict 4sFu0eB1egnCpa2RIlnbNpRK4EkbK3eNCsz3HAERAJbdwD61px52QzzqnRo4k6A
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
@@ -229,7 +229,8 @@ CREATE TABLE public.contacts (
     owner integer NOT NULL,
     contacts integer NOT NULL,
     conname character varying(60) DEFAULT ''::character varying NOT NULL,
-    adddate integer DEFAULT 0 NOT NULL
+    adddate integer DEFAULT 0 NOT NULL,
+    type smallint DEFAULT 0 NOT NULL
 );
 
 
@@ -1073,26 +1074,25 @@ INSERT INTO public.notification VALUES (5, 1, 'admin', 2, 'reply', '回复了您
 -- Data for Name: onlinestat; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922181, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922181, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922182, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922189, '127.0.0.1', '/forums/30', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922189, '127.0.0.1', '/topic/15', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922195, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922201, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922207, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922218, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922218, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922225, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922232, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922242, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922243, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922243, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922277, '127.0.0.1', '/', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922304, '127.0.0.1', '/topic/15', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922671, '127.0.0.1', '/topic/1', 0);
-INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789922671, '127.0.0.1', '/topic/15', 0);
 INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923016, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923060, '222.128.189.201', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923060, '222.128.189.201', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923066, '222.128.189.201', '/forums/20', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923068, '222.128.189.201', '/topic/9', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923068, '222.128.189.201', '/topic/9', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923071, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923071, '127.0.0.1', '/topic/1', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923071, '127.0.0.1', '/topic/9', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923071, '127.0.0.1', '/topic/8', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923071, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923087, '222.128.189.201', '/forums/20', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923090, '222.128.189.201', '/topic/9', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923092, '222.128.189.201', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923123, '222.128.189.201', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923123, '222.128.189.201', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923126, '222.128.189.201', '/forums/10', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923131, '127.0.0.1', '/', 0);
+INSERT INTO public.onlinestat VALUES ('Guest', 0, 1789923588, '127.0.0.1', '/', 0);
 
 
 --
@@ -1272,6 +1272,7 @@ INSERT INTO public.sessions VALUES ('74a51e763051b17ca4f5b77a46274acf95ef3333c6f
 INSERT INTO public.sessions VALUES ('17cc4acccd3e517de49ff13b79ed2be00f36214c3c045d4d', 1, 1789921141, 1789921141, '127.0.0.1');
 INSERT INTO public.sessions VALUES ('d74c7584d64842a9df2211f1989d02c8671f905b84a41049', 3, 1789921141, 1789921141, '127.0.0.1');
 INSERT INTO public.sessions VALUES ('5ec242b9eab7f6ecccac40fb55a6a37a8931fbfcffda6500', 2, 1789921630, 1789921630, '127.0.0.1');
+INSERT INTO public.sessions VALUES ('f481c5edd999bdae2265bdeba83d783016a2e3debc0180d1', 3, 1789923602, 1789923602, '127.0.0.1');
 
 
 --
@@ -1316,10 +1317,7 @@ INSERT INTO public.thread_tags VALUES (1, 8);
 -- Data for Name: threads; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-INSERT INTO public.threads VALUES (8, 30, 0, 0, '今天天气不错，出来冒个泡', '水一水，涨积分。', '水贴之王', 5, 1700900000, 1700910000, 88, 0, '', 0, 0, '灌水', '7', 1, '', '', 0, 0);
-INSERT INTO public.threads VALUES (1, 10, 0, 0, '[公告] BMForum 复刻版正式上线', '经过努力，BMForum 7 的 TypeScript + PostgreSQL 复刻版正式上线！[b]功能包括：[/b][list]分类版块、主题回帖、BMBCode、标签、投票、短消息、在线列表、后台管理[/list]欢迎体验。', 'bsd_fan', 2, 1700000000, 1700000000, 377, 4, '月光骑士', 0, 0, 'BMForum,公告', '1,8', 12, '', '', 1, 0);
 INSERT INTO public.threads VALUES (6, 30, 0, 0, '[投票] 你最早用的论坛程序是哪个？', '来投个票，看看大家都是从什么年代过来的！', 'php老兵', 4, 1700750000, 1700880000, 313, 2, '月光骑士', 0, 1, '灌水,怀旧', '7,6', 15, '', '', 0, 1);
-INSERT INTO public.threads VALUES (9, 20, 0, 0, 'Node.js 里怎么优雅地写数据库迁移脚本', '用纯 SQL 文件 + 启动脚本执行，比 ORM 迁移更直观，大家怎么看？', '月光骑士', 3, 1700850000, 1700890000, 68, 0, '', 0, 0, 'PostgreSQL,PHP', '4,3', 2, '', '', 0, 0);
 INSERT INTO public.threads VALUES (2, 10, 1, 0, '[公告] 论坛发帖规范 v2', '为维护论坛秩序，请遵守以下规范：[quote]1. 禁止灌水广告；2. 标题明确；3. 尊重他人[/quote]违规将被扣分处理。', '水贴之王', 5, 1699000000, 1699000000, 263, 1, '水贴之王', 0, 0, '公告', '8', 5, '', '', 0, 0);
 INSERT INTO public.threads VALUES (3, 20, 0, 0, '从 PHP 迁移到 TypeScript 的心得', '十年 PHP 老兵表示：[b]TypeScript 的类型系统真的香[/b]。用 node-postgres 原生驱动连接 PG，配合 Next.js 服务端组件，开发体验拉满。附上连接池代码：[code]import { Pool } from "pg";
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
@@ -1331,6 +1329,9 @@ INSERT INTO public.threads VALUES (15, 30, 0, 0, '交易标签功能演示（出
 [gift=10]礼金演示：楼主可以用 [gift=金额] 给回复的会员发放礼金，点击下方帖子右下角的“发礼金”即可。[/gift]', 'bsd_fan', 2, 1789919379, 1789921825, 10, 1, 'admin', 0, 0, '', '', 0, '', '演示出售、礼金、求赏三种交易标签的实际效果。', 0, 0);
 INSERT INTO public.threads VALUES (7, 31, 0, 0, '晒出你的老论坛收藏：BMForum、Discuz、PHPWind', '那些年的三大 PHP 论坛程序，谁还记得「主题随意贴」这个功能？', 'php老兵', 4, 1700800000, 1700860000, 176, 1, 'php老兵', 0, 0, '怀旧,BMForum,经典论坛', '6,1,2', 9, '', '', 0, 0);
 INSERT INTO public.threads VALUES (10, 11, 0, 0, '建议增加夜间模式', '如题，晚上看论坛太亮了。', 'admin', 1, 1700650000, 1700660000, 45, 1, 'admin', 0, 0, '经典论坛', '2', 3, '', '', 0, 0);
+INSERT INTO public.threads VALUES (1, 10, 0, 0, '[公告] BMForum 复刻版正式上线', '经过努力，BMForum 7 的 TypeScript + PostgreSQL 复刻版正式上线！[b]功能包括：[/b][list]分类版块、主题回帖、BMBCode、标签、投票、短消息、在线列表、后台管理[/list]欢迎体验。', 'bsd_fan', 2, 1700000000, 1700000000, 378, 4, '月光骑士', 0, 0, 'BMForum,公告', '1,8', 12, '', '', 1, 0);
+INSERT INTO public.threads VALUES (8, 30, 0, 0, '今天天气不错，出来冒个泡', '水一水，涨积分。', '水贴之王', 5, 1700900000, 1700910000, 89, 0, '', 0, 0, '灌水', '7', 1, '', '', 0, 0);
+INSERT INTO public.threads VALUES (9, 20, 0, 0, 'Node.js 里怎么优雅地写数据库迁移脚本', '用纯 SQL 文件 + 启动脚本执行，比 ORM 迁移更直观，大家怎么看？', '月光骑士', 3, 1700850000, 1700890000, 72, 0, '', 0, 0, 'PostgreSQL,PHP', '4,3', 2, '', '', 0, 0);
 
 
 --
@@ -1350,9 +1351,9 @@ INSERT INTO public.usergroup VALUES (1, '注册会员', 'member.gif', 1, 1, 1, 1
 
 INSERT INTO public.userlist VALUES (4, 'php老兵', 'ba1aad78143ff79ea54d0ce560f614d1e9df4411895585e8b2b29f8513c2eeb3', 'b19780dd588bf92a', 'vet@bmforum.dev', 1, '2008-06-30', 'PHP 是世界上最好的语言（狗头）', '', '北京', '写了十年 PHP 的老码农。', '', 67, 2300, 8800, 0, 0, '', 'm', '1983-04-18', 'online', 0);
 INSERT INTO public.userlist VALUES (5, '水贴之王', 'f985c790e3b1be6b47acfa0f01b7a3c5819315d76755943378f77a7264ef03a4', '02d97f9930d30498', 'water@bmforum.dev', 1, '2015-02-14', '灌水使我快乐。', '', '成都', '专业灌水二十年。', '', 210, 800, 3200, 0, 0, '', 'm', '1995-12-05', 'online', 0);
-INSERT INTO public.userlist VALUES (3, '月光骑士', 'ba7b727f23f1f124b85fabcb7e4ec02211d3ac420068539db35ba6c35904aac7', 'e36a14496163a9b4', 'moon@bmforum.dev', 1, '2010-11-02', '潜水多年，偶尔冒泡。', '', '广州', '普通坛友一枚。', '', 47, 1500, 5600, 1789921141, 1789918828, '', 'f', '1990-09-21', 'online', 0);
 INSERT INTO public.userlist VALUES (2, 'bsd_fan', '86fc166b5d369a32e44ade07d8169da349350020e19dc2b9ddd3f3bbb7ab3e1c', '193e9b0d3b521e83', 't@t.io', 1, '2007-03-15', '', '', '测试城市', '老论坛程序爱好者，收集各种经典皮肤。', '', 88, 3200, 11989, 1789921630, 1789919412, '/api/attachment/3', '男', '1990-01-01', 'online', 0);
-INSERT INTO public.userlist VALUES (1, 'admin', '6cfeb1231cb191068c8ddd4d13e003c65db3c30c9fe7835854c8ca71f0fef54c', 'e188080bae72e078', 'admin@bmforum.dev', 3, '2005-08-01', '论坛的管理员，有问题请找我。', '', '管理后台', '负责论坛日常维护与安全管理。', '管理员', 133, 9999, 50011, 1789921141, 1789919172, '', 'm', '1980-01-01', 'online', 0);
+INSERT INTO public.userlist VALUES (3, '月光骑士', 'ba7b727f23f1f124b85fabcb7e4ec02211d3ac420068539db35ba6c35904aac7', 'e36a14496163a9b4', 'moon@bmforum.dev', 1, '2010-11-02', '潜水多年，偶尔冒泡。', '', '广州', '普通坛友一枚。', '', 47, 1500, 5600, 1789923602, 1789918828, '', 'f', '1990-09-21', 'online', 0);
+INSERT INTO public.userlist VALUES (1, 'admin', '6cfeb1231cb191068c8ddd4d13e003c65db3c30c9fe7835854c8ca71f0fef54c', 'e188080bae72e078', 'admin@bmforum.dev', 3, '2005-08-01', '论坛的管理员，有问题请找我。', '', '管理后台', '负责论坛日常维护与安全管理。', '管理员', 132, 9999, 50011, 1789921141, 1789919172, '', 'm', '1980-01-01', 'online', 0);
 
 
 --
@@ -1395,7 +1396,7 @@ SELECT pg_catalog.setval('public.attachments_id_seq', 3, true);
 -- Name: contacts_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.contacts_id_seq', 1, true);
+SELECT pg_catalog.setval('public.contacts_id_seq', 3, true);
 
 
 --
@@ -1715,6 +1716,13 @@ ALTER TABLE ONLY public.wordfilter
 
 
 --
+-- Name: contacts_owner_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX contacts_owner_idx ON public.contacts USING btree (owner, contacts, type);
+
+
+--
 -- Name: idx_fav_owner; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1816,5 +1824,5 @@ CREATE INDEX idx_userlist_group ON public.userlist USING btree (usergroup);
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 7hpeXATBqr6E8cP6yby4Q00IhtcHMoRyn05bWBQQEB1le1T3coeIvZpV364KEcJ
+\unrestrict 4sFu0eB1egnCpa2RIlnbNpRK4EkbK3eNCsz3HAERAJbdwD61px52QzzqnRo4k6A
 

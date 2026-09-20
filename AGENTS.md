@@ -11,6 +11,8 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **主题简介**：threads.newdesc，发帖/编辑表单字段，版块主题列表标题下显示
 - **举报（原版 report.php）**：API `src/app/api/report`，PM 通知版主/管理员 + forumlog
 - **验证码（原版 authimg.php）**：`src/lib/captcha.ts`（无状态 HMAC token，SECRET=BMF_CAPTCHA_SECRET||DATABASE_URL），GET /api/captcha，注册接口强制校验
+- **好友/联系人（原版 friendlist.php）**：contacts 表（owner/contacts/conname/adddate/type：0=好友 1=特别关注 2=黑名单）；API `src/app/api/contacts`（GET 联表 userlist 返回 {ok,list}，POST 兼容 {username,type} 与 {action:add/del/clean,name,type}，DELETE {username}）；控制面板 `/usercp?tab=contacts` 分组管理（usercp-extras.tsx ContactsManager）；profile 页 ContactQuickActions（contact-actions.tsx）加好友/拉黑，isSelf 隐藏
+- **版主前台日志（原版 forumlogs.php）**：页面 `/forumlogs/[fid]`（版主/管理员/本版 blad 校验，ACTION_NAMES 动作映射，分页 20 条），管理员可清空（LogCleanButton → POST /api/forumlogs {action:"clean",fid}，仅 usergroup===3）；时间格式 fmtFullDate（format.ts）
 - **后台管理** `/admin`：版块/公告/用户/用户组/回收站/敏感词/IP封禁/邀请/站点设置(bbs_config)/禁注名单(banname)/附件管理/日志(adminlog+forumlog)/缓存重建；面板组件在 `src/components/bmf/admin-panels.tsx`（客户端统一 POST {action,...}，路由需同时支持 POST action 分支）
 - **站点设置**：bbs_config 表（bbs_title/bbs_des/welcomemess/closereg/moneyunit/perpage）；layout 读 bbs_title，主题页读 perpage，注册读 closereg，交易渲染读 moneyunit
 - **投票系统（原版 vote.php/poll.htm）**：polls.setting 含 maxchoose/viewafter/deadline/minposts；POST `/api/threads/[tid]/vote` {choices:[...]}（登录/canvote/未锁定/未投过/多选上限/到期/最低发帖数校验）；列表图标 threads.type=1；帖子页 PollBox（viewafter 未投不显结果、参与者下拉、到期截止、比例条）；发帖表单投票设置（单选/多选/最多可选/投票后可见/到期日/最低发帖）

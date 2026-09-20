@@ -120,13 +120,21 @@ interface ContactRow {
   username: string;
   userid: number | null;
   postamount: number | null;
+  type?: number;
 }
 
-/** 好友/联系人管理 */
+const CONTACT_GROUPS: [number, string][] = [
+  [0, "好友"],
+  [1, "特别关注"],
+  [2, "黑名单"],
+];
+
+/** 好友/联系人管理（原版 friendlist.php：三组名单 + 快捷发消息 + 清空） */
 export function ContactsManager() {
   const router = useRouter();
   const [list, setList] = useState<ContactRow[]>([]);
   const [input, setInput] = useState("");
+  const [group, setGroup] = useState(0);
   const [msg, setMsg] = useState("");
   const [loaded, setLoaded] = useState(false);
 
@@ -147,15 +155,27 @@ export function ContactsManager() {
     const res = await fetch("/api/contacts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username: input.trim() }),
+      body: JSON.stringify({ username: input.trim(), type: group }),
     });
-    const data = (await res.json()) as { ok: boolean; error?: string };
+    const data = (await res.json()) as { ok: boolean; error?: string; message?: string };
     if (!data.ok) return setMsg(data.error || "添加失败");
+    setMsg(data.message || "添加成功");
     setInput("");
     load();
   }
 
+  async function cleanAll() {
+    if (!window.confirm("确定清空全部联系人名单吗？")) return;
+    await fetch("/api/contacts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "clean" }),
+    });
+    load();
+  }
+
   async function remove(username: string) {
+    if (!window.confirm(`确定将 ${username} 从名单中移除吗？`)) return;
     await fetch("/api/contacts", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -166,45 +186,69 @@ export function ContactsManager() {
 
   return (
     <div className="bmf-row">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           className="bmf-input !w-56"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="输入用户名添加好友"
+          placeholder="输入用户名添加"
           maxLength={30}
         />
+        <select
+          className="bmf-tool-select"
+          value={group}
+          onChange={(e) => setGroup(Number(e.target.value))}
+        >
+          {CONTACT_GROUPS.map(([v, label]) => (
+            <option key={v} value={v}>
+              {label}
+            </option>
+          ))}
+        </select>
         <button type="button" className="bmf-btn bmf-btn-primary !py-1" onClick={add}>
-          添加好友
+          添加
         </button>
-        <span className="text-xs text-[#999]">添加后可快速发送短消息</span>
+        <button type="button" className="bmf-btn !py-1" onClick={cleanAll}>
+          清空名单
+        </button>
       </div>
-      {msg && <div className="mb-2 text-xs text-[#cc3311]">{msg}</div>}
+      {msg && <div className="mb-2 text-xs text-[#336699]">{msg}</div>}
       {!loaded ? (
         <div className="text-xs text-[#999]">加载中...</div>
       ) : list.length === 0 ? (
-        <div className="text-xs text-[#999]">还没有好友，先添加一个吧。</div>
+        <div className="text-xs text-[#999]">名单为空，先添加一个联系人吧。</div>
       ) : (
-        <div className="grid gap-1">
-          {list.map((c) => (
-            <div key={c.username} className="flex items-center justify-between border-b border-[#f0f0f0] py-1 text-[13px]">
-              <span>
-                <a href={`/profile/${c.userid ?? 0}`} className="text-[#3083be]">
-                  {c.username}
-                </a>
-                <span className="ml-2 text-xs text-[#999]">{c.postamount ?? 0} 帖</span>
-              </span>
-              <span className="flex gap-2 text-xs">
-                <a href={`/messenger?to=${encodeURIComponent(c.username)}`} className="text-[#3083be]">
-                  发消息
-                </a>
-                <button type="button" className="text-[#cc3311]" onClick={() => remove(c.username)}>
-                  移除
-                </button>
-              </span>
+        CONTACT_GROUPS.map(([gv, gname]) => {
+          const rows = list.filter((c) => (c.type ?? 0) === gv);
+          if (rows.length === 0) return null;
+          return (
+            <div key={gv} className="mb-3">
+              <div className="mb-1 border-b border-[#3083be] pb-0.5 text-xs font-bold text-[#3083be]">
+                {gname}（{rows.length}）
+              </div>
+              <div className="grid gap-1">
+                {rows.map((c) => (
+                  <div key={c.username} className="flex items-center justify-between border-b border-[#f0f0f0] py-1 text-[13px]">
+                    <span>
+                      <a href={`/profile/${c.userid ?? 0}`} className="text-[#3083be]">
+                        {c.username}
+                      </a>
+                      <span className="ml-2 text-xs text-[#999]">{c.postamount ?? 0} 帖</span>
+                    </span>
+                    <span className="flex gap-2 text-xs">
+                      <a href={`/messenger?to=${encodeURIComponent(c.username)}`} className="text-[#3083be]">
+                        发消息
+                      </a>
+                      <button type="button" className="text-[#cc3311]" onClick={() => remove(c.username)}>
+                        移除
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })
       )}
     </div>
   );
