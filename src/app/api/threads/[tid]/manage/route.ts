@@ -45,6 +45,13 @@ export async function POST(
       });
       return ok();
     }
+    case "trash":
+      await transaction(async (c) => {
+        await c.query("UPDATE threads SET ttrash = 1 WHERE tid = $1", [tid]);
+        await c.query("UPDATE forumdata SET topicnum = GREATEST(topicnum - 1, 0) WHERE id = $1", [thread.forumid]);
+        await c.query("UPDATE lastest SET threadnum = GREATEST(threadnum - 1, 0)");
+      });
+      return ok({ trashed: true });
     case "delete":
       await transaction(async (c) => {
         const t = await c.query<{ replys: number }>("SELECT replys FROM threads WHERE tid = $1", [tid]);

@@ -21,12 +21,12 @@ export default function TopicTools({ tid, forumid }: { tid: number; forumid: num
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action, forumid: forumId }),
       });
-      const data = (await res.json()) as { ok: boolean; deleted?: boolean; error?: string };
+      const data = (await res.json()) as { ok: boolean; deleted?: boolean; trashed?: boolean; error?: string };
       if (!data.ok) {
         alert(data.error || "操作失败");
         return;
       }
-      if (data.deleted) router.push(`/forums/${forumid}`);
+      if (data.deleted || data.trashed) router.push(`/forums/${forumid}`);
       else router.refresh();
     } finally {
       setBusy(false);
@@ -46,6 +46,16 @@ export default function TopicTools({ tid, forumid }: { tid: number; forumid: num
           {a.label}
         </button>
       ))}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => {
+          if (confirm("确定将该主题移入回收站？管理员可在后台还原。")) act("trash");
+        }}
+        className="cursor-pointer text-[#ffdddd] hover:underline disabled:opacity-60"
+      >
+        回收站
+      </button>
       <button
         type="button"
         disabled={busy}

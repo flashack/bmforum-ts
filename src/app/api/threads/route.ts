@@ -1,17 +1,21 @@
 import { NextRequest } from "next/server";
 import { queryOne, execute, transaction } from "@/lib/db";
 import { str, num, readBody, ok, fail, POST_INTERVAL } from "@/lib/api";
-import { getAuth } from "@/lib/auth";
+import { getAuth, clientIp } from "@/lib/auth";
+import { applyWordFilter, isIpBanned } from "@/lib/moderation";
 
 /** POST /api/threads —— 发布新主题（含投票与标签） */
 export async function POST(req: NextRequest) {
   const auth = await getAuth();
   if (!auth.user) return fail("请先登录后再发布主题");
+  if (!auth.user.canpost) return fail("您所在的用户组无权发布主题", 403);
+  if (await isIpBanned(await clientIp())) return fail("您的 IP 已被封禁", 403);
+
   const body = await readBody(req);
   const forumid = num(body, "forumid");
-  const title = str(body, "title", 200);
-  const content = str(body, "content", 60000);
-  const tags = str(body, "tags", 200);
+  const title = await applyWordFilter(str(body, "title", 200));
+  const content = await applyWordFilter(str(body, "content", 60000));
+  const tags = await applyWordFilter(str(body, "tags", 200));
   const toptype = num(body, "toptype") || 0;
   const pollOptions = Array.isArray(body.pollOptions)
     ? (body.pollOptions as unknown[])

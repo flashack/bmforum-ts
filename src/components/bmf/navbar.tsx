@@ -13,7 +13,14 @@ export interface NavUser {
 interface MenuDef {
   label: string;
   href?: string;
-  items?: { label: string; href: string; badge?: number; divider?: boolean }[];
+  items?: { label: string; href: string; badge?: number; divider?: boolean; style?: string }[];
+}
+
+/** 界面风格切换：写 cookie + 切换 html[data-bmf-style]，服务端在 layout 中读取同一 cookie */
+function applyStyle(v: string) {
+  document.cookie = `bmf_style=${encodeURIComponent(v)}; path=/; max-age=31536000`;
+  if (v === "default") delete document.documentElement.dataset.bmfStyle;
+  else document.documentElement.dataset.bmfStyle = v;
 }
 
 export default function Navbar({
@@ -44,11 +51,20 @@ export default function Navbar({
         { label: "发帖排行", href: "/userlist?sort=posts" },
         { label: "会员列表", href: "/userlist" },
         { label: "Tags 标签", href: "/tags" },
+        { label: "RSS 订阅", href: "/rss" },
         ...(user
           ? [
               { label: "我的主题", href: `/search?author=${encodeURIComponent(user.username)}` },
             ]
           : []),
+      ],
+    },
+    {
+      label: "界面风格",
+      items: [
+        { label: "经典蓝（默认）", href: "", style: "default" },
+        { label: "青竹绿", href: "", style: "green" },
+        { label: "枣红", href: "", style: "wine" },
       ],
     },
   ];
@@ -149,6 +165,19 @@ function DropDown({ m, open, onToggle }: { m: MenuDef; open: boolean; onToggle: 
           {m.items.map((it, idx) =>
             it.divider ? (
               <li key={idx} className="my-1 border-t border-[#e5e5e5]" />
+            ) : it.style ? (
+              <li key={idx}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    applyStyle(it.style as string);
+                    onToggle();
+                  }}
+                  className="block w-full cursor-pointer px-4 py-1.5 text-left text-[13px] !text-[#444] hover:!bg-[#f0f0f0] hover:!text-[#444]"
+                >
+                  {it.label}
+                </button>
+              </li>
             ) : (
               <li key={idx}>
                 <Link

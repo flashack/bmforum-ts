@@ -29,9 +29,71 @@ function sizeToPx(n: number): number {
   return map[Math.max(1, Math.min(6, n))];
 }
 
-/** 解析 BMBCode 为 HTML（输入为原始文本，输出已转义的安全 HTML） */
-export function parseBmbCode(input: string): string {
+/** 表情文件清单（public/face/，来自原版 BMForum emotpacks/default） */
+export const EMOTICONS: { file: string; name: string }[] = [
+  { file: "20.gif", name: "微笑" },
+  { file: "29.gif", name: "酷" },
+  { file: "36.gif", name: "疑问" },
+  { file: "a.gif", name: "拜托" },
+  { file: "icon1000.gif", name: "汗" },
+  { file: "icon1001.gif", name: "狂汗" },
+  { file: "icon1100.gif", name: "大笑" },
+  { file: "icon1200.gif", name: "哭泣" },
+  { file: "icon1300.gif", name: "生气" },
+  { file: "icon1400.gif", name: "惊讶" },
+  { file: "icon1500.gif", name: "调皮" },
+  { file: "icon1600.gif", name: "可爱" },
+  { file: "icon1800.gif", name: "晕" },
+  { file: "icon2000.gif", name: "睡觉" },
+  { file: "icon2001.gif", name: "打哈欠" },
+  { file: "icon2100.gif", name: "加油" },
+  { file: "icon3000.gif", name: "爱心" },
+  { file: "icon4000.gif", name: "强" },
+  { file: "icon4600.gif", name: "弱" },
+  { file: "icon5000.gif", name: "赞" },
+  { file: "icon7000.gif", name: "疑问脸" },
+  { file: "icon8000.gif", name: "害羞" },
+  { file: "icon9000.gif", name: "闭嘴" },
+  { file: "icon9100.gif", name: "吐舌" },
+  { file: "icon9200.gif", name: "无语" },
+];
+
+export interface AttachInfo {
+  id: number;
+  filename: string;
+  size: number;
+  downloads: number;
+}
+
+function fmtSize(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
+}
+
+/**
+ * 解析 BMBCode 为 HTML（输入为原始文本，输出已转义的安全 HTML）
+ * @param attachMap 附件元数据（用于渲染 [attach=N] 下载块），可选
+ */
+export function parseBmbCode(input: string, attachMap?: Map<number, AttachInfo>): string {
   let s = escapeHtml(input);
+
+  // 0. 表情 [s:xxx] 与附件 [attach=N]
+  s = s.replace(
+    /\[s:([A-Za-z0-9]+)\]/g,
+    (_m, name: string) =>
+      `<img src="/face/${encodeURIComponent(name)}.gif" alt="表情" title="表情" class="inline-block align-middle" />`
+  );
+  s = s.replace(/\[attach=(\d+)\]/gi, (_m, idStr: string) => {
+    const id = parseInt(idStr, 10);
+    const a = attachMap?.get(id);
+    const name = a?.filename ?? "附件";
+    const size = a ? fmtSize(a.size) : "";
+    const dl = a && a.downloads > 0 ? ` · 已下载 ${a.downloads} 次` : "";
+    return `<div class="bmf-attach"><span class="bmf-attach-icon">📎</span><a href="/api/attachment/${id}" class="bmf-attach-name">${escapeHtml(
+      name
+    )}</a><span class="bmf-attach-meta">${size}${dl}</span></div>`;
+  });
 
   // 1. 保护 [code] 块
   const codeBlocks: string[] = [];
@@ -126,6 +188,8 @@ export function bmbCodeToPlain(input: string, maxLen = 100): string {
   const text = input
     .replace(/\[code\][\s\S]*?\[\/code\]/gi, "[代码]")
     .replace(/\[img\][^\[]*\[\/img\]/gi, "[图片]")
+    .replace(/\[attach=\d+\]/gi, "[附件]")
+    .replace(/\[s:[A-Za-z0-9]+\]/g, "[表情]")
     .replace(/\[url=([^\]]+)\][\s\S]*?\[\/url\]/gi, "$1")
     .replace(/\[(\/?)[a-z]+(=[^\]]*)?\]/gi, "")
     .replace(/\s+/g, " ")

@@ -2,15 +2,17 @@ import { NextRequest } from "next/server";
 import { query, queryOne, execute } from "@/lib/db";
 import { num, readBody, str, ok, fail } from "@/lib/api";
 import { getAuth } from "@/lib/auth";
+import { applyWordFilter } from "@/lib/moderation";
 
 /** POST /api/messages —— 发送短消息 */
 export async function POST(req: NextRequest) {
   const auth = await getAuth();
   if (!auth.user) return fail("请先登录后再发送消息");
+  if (!auth.user.canpm) return fail("您所在的用户组无权发送短消息", 403);
   const body = await readBody(req);
   const sendto = str(body, "sendto", 30);
-  const prtitle = str(body, "title", 100);
-  const prcontent = str(body, "content", 20000);
+  const prtitle = await applyWordFilter(str(body, "title", 100));
+  const prcontent = await applyWordFilter(str(body, "content", 20000));
   if (!sendto || !prtitle || !prcontent) return fail("收件人、标题和内容均不能为空");
 
   const target = await queryOne<{ username: string }>(

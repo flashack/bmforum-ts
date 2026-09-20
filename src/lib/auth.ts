@@ -22,6 +22,13 @@ export interface SessionUser {
   newmess: number;
   online_status: string;
   lastpost: number;
+  canpost: number;
+  canreply: number;
+  canupload: number;
+  canvote: number;
+  canpm: number;
+  candigg: number;
+  cansearch: number;
 }
 
 export interface AuthState {
@@ -52,8 +59,11 @@ export async function getAuth(): Promise<AuthState> {
     `SELECT u.userid, u.username, u.usergroup, u.headtitle, u.postamount, u.point,
             u.money, u.avatar, u.signtext, u.mailadd, u.homepage, u.fromwhere,
             u.sex, u.birthday, u.online_status, u.lastpost,
+            g.canpost, g.canreply, g.canupload, g.canvote, g.canpm, g.candigg, g.cansearch,
             (SELECT count(*) FROM primsg WHERE belong = u.username AND prread = 0 AND prtype = 'r')::int AS newmess
-     FROM sessions s JOIN userlist u ON u.userid = s.userid
+     FROM sessions s
+     JOIN userlist u ON u.userid = s.userid
+     LEFT JOIN usergroup g ON g.id = u.usergroup
      WHERE s.sid = $1`,
     [sid]
   );
@@ -63,6 +73,12 @@ export async function getAuth(): Promise<AuthState> {
     isAdmin: user.usergroup === 3,
     isMod: user.usergroup === 2 || user.usergroup === 3,
   };
+}
+
+/** 从请求头提取客户端 IP */
+export async function clientIp(): Promise<string> {
+  const h = await headers();
+  return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
 }
 
 /** 创建会话并写入 Cookie（仅在 Route Handler 中调用） */

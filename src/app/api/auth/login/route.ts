@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 import { queryOne, execute } from "@/lib/db";
 import { str, readBody, ok, fail } from "@/lib/api";
-import { verifyPassword, createSession } from "@/lib/auth";
+import { verifyPassword, createSession, clientIp } from "@/lib/auth";
+import { isIpBanned } from "@/lib/moderation";
 
 /** POST /api/auth/login —— 登录 */
 export async function POST(req: NextRequest) {
+  const ip = await clientIp();
+  if (await isIpBanned(ip)) return fail("您的 IP 已被禁止登录", 403);
+
   const body = await readBody(req);
   const username = str(body, "username", 30);
   const password = str(body, "password", 100);

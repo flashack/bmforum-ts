@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { parseBmbCode } from "@/lib/bmbcode";
+import { parseBmbCode, EMOTICONS } from "@/lib/bmbcode";
 
 export interface EditorForum {
   id: number;
@@ -16,6 +16,7 @@ export default function PostEditor({
   quoteTitle,
   quoteContent,
   quoteAuthor,
+  canUpload,
 }: {
   forums: EditorForum[];
   defaultForumId?: number;
@@ -23,6 +24,7 @@ export default function PostEditor({
   quoteTitle?: string;
   quoteContent?: string;
   quoteAuthor?: string;
+  canUpload?: boolean;
 }) {
   const isReply = typeof replyTo === "number";
   const router = useRouter();
@@ -37,6 +39,10 @@ export default function PostEditor({
   const [busy, setBusy] = useState(false);
   const areaRef = useRef<HTMLTextAreaElement>(null);
   const [preview, setPreview] = useState(false);
+  const [showEmot, setShowEmot] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [attachMsg, setAttachMsg] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function insert(left: string, right = "") {
     const el = areaRef.current;
@@ -50,6 +56,36 @@ export default function PostEditor({
       el.selectionStart = start + left.length;
       el.selectionEnd = end + left.length;
     });
+  }
+
+  async function uploadAttachment() {
+    const file = fileRef.current?.files?.[0];
+    setAttachMsg("");
+    if (!file) {
+      setAttachMsg("请先选择文件");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setAttachMsg("附件不能超过 5MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("tid", String(replyTo ?? 0));
+      const res = await fetch("/api/attachment", { method: "POST", body: fd });
+      const data = (await res.json()) as { ok: boolean; id?: number; error?: string };
+      if (!data.ok || !data.id) {
+        setAttachMsg(data.error || "上传失败");
+        return;
+      }
+      insert(`[attach=${data.id}]`);
+      setAttachMsg(`已上传：${file.name}`);
+      if (fileRef.current) fileRef.current.value = "";
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function submit() {
@@ -187,15 +223,47 @@ export default function PostEditor({
                 >
                   大字
                 </button>
+                <button
+                  type="button"
+                  className="bmf-btn !py-0.5 !text-xs"
+                  onClick={() => setShowEmot(!showEmot)}
+                >
+                  表情
+                </button>
               </div>
+              {showEmot && (
+                <div className="bmf-emot-panel">
+                  {EMOTICONS.map((e) => (
+                    <button
+                      key={e.file}
+                      type="button"
+                      title={e.name}
+                      onClick={() => insert(`[s:${e.file.replace(".gif", "")}]`)}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/face/${e.file}`} alt={e.name} width={28} height={28} />
+                    </button>
+                  ))}
+                </div>
+              )}
               <textarea
                 ref={areaRef}
                 className="bmf-input font-sans"
                 rows={12}
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder="支持 BMBCode：[b]加粗[/b] [i]斜体[/i] [quote]引用[/quote] [code]代码[/code] [img]图片[/img] [url=https://...]链接[/url] [color=red]红色[/color] [list=1][*]列表[/list]"
+                placeholder="支持 BMBCode：[b]加粗[/b] [i]斜体[/i] [quote]引用[/quote] [code]代码[/code] [img]图片[/img] [url=https://...]链接[/url] [color=red]红色[/color] [list=1][*]列表[/list] [s:icon1100]表情"
               />
+              {canUpload && (
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                  <input ref={fileRef} type="file" className="text-xs" />
+                  <button type="button" className="bmf-btn !py-0.5" onClick={uploadAttachment} disabled={uploading}>
+                    {uploading ? "上传中..." : "上传附件"}
+                  </button>
+                  <span className="text-[#999999]">≤5MB，上传后自动插入 [attach] 标记</span>
+                  {attachMsg && <span className="text-[#336699]">{attachMsg}</span>}
+                </div>
+              )}
               <div className="mt-1 flex gap-2 text-xs">
                 <button type="button" className="bmf-btn !py-0.5" onClick={() => setPreview(!preview)}>
                   {preview ? "关闭预览" : "预览内容"}

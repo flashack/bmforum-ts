@@ -4,6 +4,7 @@ import { getAuth } from "@/lib/auth";
 import { query, queryOne } from "@/lib/db";
 import NaviBar from "@/components/bmf/navi-bar";
 import ProfileForm from "@/components/bmf/profile-form";
+import { PasswordForm, AvatarUpload, ContactsManager, TransferForm } from "@/components/bmf/usercp-extras";
 import { fmtTime, fmtRelative } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -51,6 +52,9 @@ export default async function UsercpPage({ searchParams }: { searchParams: Promi
 
   const TABS: [string, string][] = [
     ["profile", "编辑个人资料"],
+    ["avatar", "头像"],
+    ["contacts", "好友/联系人"],
+    ["account", "账户安全"],
     ["favorites", `我的收藏`],
     ["posts", "我的帖子"],
   ];
@@ -86,6 +90,16 @@ export default async function UsercpPage({ searchParams }: { searchParams: Promi
               birthday: auth.user.birthday,
             }}
           />
+        ) : tab === "avatar" ? (
+          <AvatarUpload current={auth.user.avatar} />
+        ) : tab === "contacts" ? (
+          <ContactsManager />
+        ) : tab === "account" ? (
+          <div>
+            <PasswordForm />
+            <div className="h-2" />
+            <TransferForm money={auth.user.money} />
+          </div>
         ) : tab === "favorites" ? (
           favs.length === 0 ? (
             <div className="bmf-row text-center text-xs text-[#999]">暂无收藏。浏览主题时点击「收藏」按钮即可加入。</div>

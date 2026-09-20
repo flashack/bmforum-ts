@@ -62,6 +62,7 @@ export default async function PostPage({
         quoteTitle={quoteTitle}
         quoteContent={quoteContent}
         quoteAuthor={quoteAuthor}
+        canUpload={!!auth.user && auth.user.canupload === 1}
       />
     </main>
   );

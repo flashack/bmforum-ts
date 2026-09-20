@@ -26,6 +26,14 @@ export default async function HomePage() {
   }
   const dayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
 
+  // 子版块：forum_cid 指向另一个版块（而非分类）的版块，嵌套展示在父版块行下
+  const forumIds = new Set(forums.filter((x) => x.type === "forum").map((x) => x.id));
+  const subMap = new Map<number, typeof forums>();
+  for (const f of forums.filter((x) => x.type === "forum" && forumIds.has(x.forum_cid))) {
+    if (!subMap.has(f.forum_cid)) subMap.set(f.forum_cid, []);
+    subMap.get(f.forum_cid)!.push(f);
+  }
+
   return (
     <main>
       {/* 原版 navi_bar：欢迎栏 + 统计 */}
@@ -133,7 +141,7 @@ export default async function HomePage() {
                     <div className="flex items-center">
                       <span
                         className="mr-2 inline-block h-[14px] w-[14px] flex-shrink-0 rounded-[2px]"
-                        style={{ background: isNew ? "#3083be" : "#c9d7e4" }}
+                        style={{ background: isNew ? "var(--bmf-main, #3083be)" : "#c9d7e4" }}
                         title={isNew ? "有新帖" : "无新帖"}
                       />
                       <Link href={`/forums/${f.id}`} className="text-[14px] font-medium">
@@ -154,6 +162,19 @@ export default async function HomePage() {
                         </span>
                       )}
                     </div>
+                    {(subMap.get(f.id)?.length ?? 0) > 0 && (
+                      <div className="mt-0.5 pl-[22px] text-xs">
+                        <span className="text-[#999]">子版块：</span>
+                        {subMap.get(f.id)!.map((s, i) => (
+                          <span key={s.id}>
+                            {i > 0 && " · "}
+                            <Link href={`/forums/${s.id}`} className="text-[#336699] hover:underline">
+                              {s.bbsname}
+                            </Link>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="w-16 text-center text-[#666]">{f.topicnum}</div>
                   <div className="w-16 text-center text-[#666]">{f.replysnum}</div>

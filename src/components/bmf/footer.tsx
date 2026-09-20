@@ -10,6 +10,10 @@ export default function Footer({ footerText }: { footerText: string }) {
         <span className="mx-1">|</span>
         <Link href="/search">搜索</Link>
         <span className="mx-1">|</span>
+        <Link href="/rss" className="text-[#e0871c]">
+          RSS 订阅
+        </Link>
+        <span className="mx-1">|</span>
         <a href="#top">回到页面顶部</a>
       </div>
       <div>{footerText}</div>

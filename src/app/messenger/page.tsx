@@ -61,12 +61,44 @@ export default async function MessengerPage({
   const TABS: [string, string][] = [
     ["inbox", `收件箱${unread && Number(unread.c) > 0 ? `(${unread.c})` : ""}`],
     ["outbox", "发件箱"],
+    ["notice", "系统通知"],
     ["compose", "撰写消息"],
   ];
 
+  // 通知列表
+  let notices: { nid: number; sendername: string; ntype: string; nvalue: string; pkey: number; timestamp: number; isread: number }[] = [];
+  let unreadNotice = 0;
+  if (tab === "notice") {
+    notices = await query(
+      `SELECT nid, sendername, ntype, nvalue, pkey, timestamp, isread
+       FROM notification WHERE receiverid = $1 ORDER BY timestamp DESC LIMIT 50`,
+      [auth.user.userid]
+    );
+    unreadNotice = notices.filter((n) => n.isread === 0).length;
+    if (unreadNotice > 0) {
+      await execute(
+        "UPDATE notification SET isread = 1 WHERE receiverid = $1 AND isread = 0",
+        [auth.user.userid]
+      );
+    }
+  } else {
+    const c = await queryOne<{ c: string }>(
+      "SELECT count(*) AS c FROM notification WHERE receiverid = $1 AND isread = 0",
+      [auth.user.userid]
+    );
+    unreadNotice = Number(c?.c ?? 0);
+  }
+
   return (
     <main>
-      <NaviBar crumbs={[{ name: "论坛首页", href: "/" }, { name: "短消息" }]} right={<>未读消息 {unread?.c ?? 0} 条</>} />
+      <NaviBar
+        crumbs={[{ name: "论坛首页", href: "/" }, { name: "短消息" }]}
+        right={
+          <>
+            未读消息 {unread?.c ?? 0} 条{unreadNotice > 0 ? ` · 新通知 ${unreadNotice} 条` : ""}
+          </>
+        }
+      />
 
       <div className="bmf-table-box">
         <div className="bmf-col-head flex gap-4">
@@ -112,6 +144,25 @@ export default async function MessengerPage({
                     <MessageActions id={m.id} />
                   </span>
                 )}
+              </div>
+            ))
+          )
+        ) : tab === "notice" ? (
+          notices.length === 0 ? (
+            <div className="bmf-row text-center text-xs text-[#999]">暂无系统通知。有人回复或点赞你的主题时会出现在这里。</div>
+          ) : (
+            notices.map((n) => (
+              <div key={n.nid} className="bmf-row flex items-center text-[13px]">
+                <span className="w-14 flex-shrink-0 text-center">
+                  {n.isread === 0 ? <b className="text-[#cc3311]">新!</b> : <span className="text-[#999]">已读</span>}
+                </span>
+                <span className="w-16 flex-shrink-0 text-center">
+                  <span className="bmf-tag">{n.ntype === "reply" ? "回复" : n.ntype === "digg" ? "点赞" : "通知"}</span>
+                </span>
+                <span className="flex-1 truncate">
+                  <b className="text-[#3083be]">{n.sendername}</b> {n.nvalue}
+                </span>
+                <span className="w-36 flex-shrink-0 text-right text-xs text-[#999]">{fmtTime(n.timestamp)}</span>
               </div>
             ))
           )

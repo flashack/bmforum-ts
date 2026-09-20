@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 import { queryOne, execute, transaction } from "@/lib/db";
-import { str, num, readBody, ok, fail, POST_INTERVAL } from "@/lib/api";
-import { getAuth } from "@/lib/auth";
+import { str, readBody, ok, fail, POST_INTERVAL } from "@/lib/api";
+import { getAuth, clientIp } from "@/lib/auth";
+import { applyWordFilter, isIpBanned, sendNotification } from "@/lib/moderation";
 
 /** POST /api/threads/[tid]/reply —— 回复主题 */
 export async function POST(
@@ -12,17 +13,19 @@ export async function POST(
   const tid = Number(tidStr);
   const auth = await getAuth();
   if (!auth.user) return fail("请先登录后再回复");
+  if (!auth.user.canreply) return fail("您所在的用户组无权回复", 403);
+  if (await isIpBanned(await clientIp())) return fail("您的 IP 已被封禁", 403);
   if (!Number.isInteger(tid)) return fail("主题参数错误");
 
-  const thread = await queryOne<{ title: string; forumid: number; islock: number }>(
-    "SELECT title, forumid, islock FROM threads WHERE tid = $1",
+  const thread = await queryOne<{ title: string; forumid: number; islock: number; authorid: number }>(
+    "SELECT title, forumid, islock, authorid FROM threads WHERE tid = $1",
     [tid]
   );
   if (!thread) return fail("主题不存在");
   if (thread.islock === 1 && !auth.isMod) return fail("主题已锁定，无法回复");
 
   const body = await readBody(req);
-  const content = str(body, "content", 60000);
+  const content = await applyWordFilter(str(body, "content", 60000));
   if (!content) return fail("请填写回复内容");
 
   const now = Math.floor(Date.now() / 1000);
@@ -52,6 +55,16 @@ export async function POST(
     ]);
     await c.query("UPDATE lastest SET postsnum = postsnum + 1, todaynew = todaynew + 1");
   });
+
+  // 通知主题作者
+  await sendNotification(
+    auth.user.userid,
+    auth.user.username,
+    thread.authorid,
+    "reply",
+    `回复了您的主题「${thread.title}」`,
+    tid
+  );
 
   return ok();
 }

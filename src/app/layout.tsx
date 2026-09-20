@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { getAuth } from "@/lib/auth";
 import { getSiteConfig } from "@/lib/queries";
@@ -19,8 +20,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const [auth, config] = await Promise.all([getAuth(), getSiteConfig()]);
+  const styleCookie = (await cookies()).get("bmf_style")?.value;
+  const bmfStyle = styleCookie === "green" || styleCookie === "wine" ? styleCookie : undefined;
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" data-bmf-style={bmfStyle}>
       <body className="antialiased bg-white pt-10">
         <Navbar
           user={

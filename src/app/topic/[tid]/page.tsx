@@ -3,13 +3,14 @@ import { notFound } from "next/navigation";
 import { getAuth, touchOnline } from "@/lib/auth";
 import { getForum, getForumList } from "@/lib/queries";
 import { query, queryOne, execute } from "@/lib/db";
-import { parseBmbCode } from "@/lib/bmbcode";
+import { parseBmbCode, type AttachInfo } from "@/lib/bmbcode";
 import NaviBar from "@/components/bmf/navi-bar";
 import Pagination from "@/components/bmf/pagination";
 import TopicTools from "@/components/bmf/topic-tools";
 import ReplyBox from "@/components/bmf/reply-box";
 import PollBox from "@/components/bmf/poll-box";
 import FavoriteButton from "@/components/bmf/favorite-button";
+import DiggButton from "@/components/bmf/digg-button";
 import { avatarUrl, fmtTime, fmtDate, groupName, groupColor } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -108,6 +109,19 @@ export default async function TopicPage({
     maxchoose: number;
   }>("SELECT options, polluser, maxchoose FROM polls WHERE tid = $1", [tid]);
 
+  // 附件元数据（用于渲染 [attach=N]）
+  const attachRows = await query<AttachInfo & { tid: number }>(
+    "SELECT id, tid, filename, size, downloads FROM attachments WHERE tid = $1 ORDER BY id",
+    [tid]
+  );
+  const attachMap = new Map<number, AttachInfo>();
+  for (const a of attachRows) attachMap.set(a.id, a);
+
+  const diggcount = await queryOne<{ diggcount: number }>(
+    "SELECT diggcount FROM threads WHERE tid = $1",
+    [tid]
+  );
+
   const favorited = auth.user
     ? (await queryOne("SELECT id FROM favorites WHERE owner = $1 AND tid = $2", [auth.user.userid, tid])) !== null
     : false;
@@ -142,6 +156,12 @@ export default async function TopicPage({
             <span className="text-[15px]">{thread.title}</span>
           </span>
           <span className="flex items-center gap-2 text-xs font-normal">
+            <DiggButton
+              tid={tid}
+              initial={diggcount?.diggcount ?? 0}
+              logged={!!auth.user}
+              canDigg={!!auth.user && auth.user.candigg === 1}
+            />
             <FavoriteButton tid={tid} initial={favorited} logged={!!auth.user} />
             {isMod && <TopicTools tid={tid} forumid={forum.id} />}
           </span>
@@ -198,7 +218,7 @@ export default async function TopicPage({
                 </div>
                 <div
                   className="bmf-article"
-                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent) }}
+                  dangerouslySetInnerHTML={{ __html: parseBmbCode(post.articlecontent, attachMap) }}
                 />
                 {author?.signtext ? (
                   <div className="mt-4 border-t border-[#dddddd] pt-2 text-xs text-[#888]">

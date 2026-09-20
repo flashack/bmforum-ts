@@ -2,14 +2,19 @@ import { NextRequest } from "next/server";
 import { randomBytes } from "node:crypto";
 import { queryOne, execute, transaction } from "@/lib/db";
 import { str, readBody, ok, fail } from "@/lib/api";
-import { hashPassword, createSession } from "@/lib/auth";
+import { hashPassword, createSession, clientIp } from "@/lib/auth";
+import { isIpBanned, consumeInviteCode } from "@/lib/moderation";
 
 /** POST /api/auth/register —— 注册 */
 export async function POST(req: NextRequest) {
+  const ip = await clientIp();
+  if (await isIpBanned(ip)) return fail("您的 IP 已被禁止注册", 403);
+
   const body = await readBody(req);
   const username = str(body, "username", 30);
   const password = str(body, "password", 100);
   const mailadd = str(body, "mailadd", 100);
+  const invite = str(body, "invitecode", 32);
 
   if (!username || !password) return fail("用户名和密码不能为空");
   if (!/^[\u4e00-\u9fa5A-Za-z0-9_]{2,30}$/.test(username)) {
@@ -23,6 +28,9 @@ export async function POST(req: NextRequest) {
     [username]
   );
   if (exists) return fail("该用户名已被注册");
+
+  const inviteResult = await consumeInviteCode(invite, username);
+  if (!inviteResult.ok) return fail(inviteResult.error || "邀请码无效");
 
   const salt = randomBytes(8).toString("hex");
   const pwd = hashPassword(password, salt);

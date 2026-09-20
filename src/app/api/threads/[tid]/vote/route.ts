@@ -14,6 +14,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tid
   const tid = Number(tidStr);
   const auth = await getAuth();
   if (!auth.user) return fail("请先登录后再投票");
+  if (!auth.user.canvote) return fail("您所在的用户组无权参与投票", 403);
 
   const poll = await queryOne<{
     options: PollOption[];

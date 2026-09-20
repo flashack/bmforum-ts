@@ -53,6 +53,17 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 }
 
+/* 界面风格变量：默认经典蓝；导航栏「界面风格」切换后由 html[data-bmf-style] 覆盖 */
+:root {
+  --bmf-main: #3083be;
+}
+html[data-bmf-style="green"] {
+  --bmf-main: #2e8b57;
+}
+html[data-bmf-style="wine"] {
+  --bmf-main: #9d3c3c;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #444444;
@@ -60,7 +71,7 @@
   --card-foreground: #444444;
   --popover: #ffffff;
   --popover-foreground: #444444;
-  --primary: #3083be;
+  --primary: var(--bmf-main, #3083be);
   --primary-foreground: #ffffff;
   --secondary: #f5f5f5;
   --secondary-foreground: #444444;
@@ -71,7 +82,7 @@
   --destructive: #cc3311;
   --border: #dddddd;
   --input: #dddddd;
-  --ring: #3083be;
+  --ring: var(--bmf-main, #3083be);
   --radius: 0.1875rem;
 }
 
@@ -122,7 +133,7 @@
     line-height: 1.6;
   }
   a {
-    color: #3083be;
+    color: var(--bmf-main, #3083be);
     text-decoration: none;
   }
   a:hover {
@@ -134,7 +145,7 @@
 
 /* 蓝色栏目标题条 */
 .bmf-bar {
-  background-color: #3083be;
+  background-color: var(--bmf-main, #3083be);
   color: #ffffff;
   font-weight: bold;
   padding: 7px 14px;
@@ -225,7 +236,7 @@
   color: #666666;
 }
 .bmf-quote-title {
-  color: #3083be;
+  color: var(--bmf-main, #3083be);
   font-weight: bold;
 }
 .bmf-code {
@@ -247,7 +258,7 @@
   border-radius: 2px;
 }
 .bmf-input:focus {
-  border-color: #3083be;
+  border-color: var(--bmf-main, #3083be);
 }
 .bmf-btn {
   display: inline-block;
@@ -317,7 +328,7 @@
 .bmf-logo-title {
   font-size: 22px;
   font-weight: bold;
-  color: #3083be;
+  color: var(--bmf-main, #3083be);
   letter-spacing: 1px;
 }
 
@@ -338,7 +349,7 @@
   margin-bottom: 12px;
 }
 .bmf-table-header {
-  background: #3083be;
+  background: var(--bmf-main, #3083be);
   color: #ffffff;
   font-weight: bold;
   padding: 7px 12px;
@@ -408,7 +419,7 @@
 }
 .bmf-article blockquote {
   border: 1px solid #dddddd;
-  border-left: 4px solid #3083be;
+  border-left: 4px solid var(--bmf-main, #3083be);
   background: #f8f8f8;
   padding: 8px 12px;
   margin: 8px 0;
@@ -440,7 +451,7 @@
   text-decoration: none;
 }
 .bmf-btn-primary {
-  background: #3083be;
+  background: var(--bmf-main, #3083be);
   border-color: #2670a5;
   color: #ffffff;
 }
@@ -469,7 +480,7 @@
   color: #333333;
 }
 .bmf-input:focus {
-  border-color: #3083be;
+  border-color: var(--bmf-main, #3083be);
   outline: none;
 }
 .bmf-label {
@@ -495,7 +506,7 @@
   display: inline-block;
   width: 19px;
   height: 15px;
-  background: #3083be;
+  background: var(--bmf-main, #3083be);
   color: #fff;
   font-size: 9px;
   line-height: 15px;
@@ -506,14 +517,14 @@
 }
 .bmf-quote {
   border: 1px solid #dddddd;
-  border-left: 4px solid #3083be;
+  border-left: 4px solid var(--bmf-main, #3083be);
   background: #f8f8f8;
   padding: 8px 12px;
   margin: 8px 0;
   color: #555555;
 }
 .bmf-quote-title {
-  color: #3083be;
+  color: var(--bmf-main, #3083be);
   font-weight: bold;
 }
 .bmf-code {
@@ -525,4 +536,60 @@
   font-family: ui-monospace, Menlo, Consolas, monospace;
   font-size: 12px;
   white-space: pre-wrap;
+}
+
+/* 表情面板与附件块 */
+.bmf-emot-panel {
+  border: 1px solid #dddddd;
+  background: #fbfbfb;
+  padding: 6px;
+  display: grid;
+  grid-template-columns: repeat(9, 34px);
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.bmf-emot-panel button {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+}
+.bmf-emot-panel button:hover {
+  border-color: var(--bmf-main, #3083be);
+  background: #eef4fa;
+}
+.bmf-attach {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #bcd4e6;
+  background: #eef4fa;
+  padding: 5px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.bmf-attach-name {
+  color: #336699;
+  font-weight: bold;
+}
+.bmf-attach-name:hover {
+  text-decoration: underline;
+}
+.bmf-attach-meta {
+  color: #999999;
+}
+.bmf-digg {
+  border: 1px solid #bcd4e6;
+  background: #eef4fa;
+  color: #336699;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+.bmf-digg:hover {
+  background: #e2ecf5;
 }

@@ -10,6 +10,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mailadd, setMailadd] = useState("");
+  const [invitecode, setInvitecode] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -21,7 +22,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       const res = await fetch(`/api/auth/${isLogin ? "login" : "register"}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(isLogin ? { username, password } : { username, password, mailadd }),
+        body: JSON.stringify(isLogin ? { username, password } : { username, password, mailadd, invitecode }),
       });
       const data = (await res.json()) as { ok: boolean; error?: string };
       if (!data.ok) {
@@ -69,6 +70,18 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                 value={mailadd}
                 onChange={(e) => setMailadd(e.target.value)}
                 autoComplete="email"
+              />
+            </div>
+          )}
+          {!isLogin && (
+            <div>
+              <label className="bmf-label">邀请码（若本站开启邀请注册则必填）</label>
+              <input
+                className="bmf-input"
+                value={invitecode}
+                onChange={(e) => setInvitecode(e.target.value)}
+                placeholder="形如 BMF-XXXXXX"
+                maxLength={32}
               />
             </div>
           )}

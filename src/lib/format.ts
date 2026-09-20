@@ -36,6 +36,7 @@ export const GROUP_NAMES: Record<number, string> = {
   1: "注册会员",
   2: "版主",
   3: "管理员",
+  4: "封禁用户",
 };
 
 export function groupName(ugnum: number): string {
@@ -45,6 +46,7 @@ export function groupName(ugnum: number): string {
 export function groupColor(ugnum: number): string {
   if (ugnum === 3) return "#cc3311";
   if (ugnum === 2) return "#0a7d32";
+  if (ugnum === 4) return "#999999";
   return "#444444";
 }
 
