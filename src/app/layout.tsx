@@ -1,69 +1,45 @@
-import type { Metadata } from 'next';
-import './globals.css';
+import type { Metadata } from "next";
+import "./globals.css";
+import { getAuth } from "@/lib/auth";
+import { getSiteConfig } from "@/lib/queries";
+import Navbar from "@/components/bmf/navbar";
+import Footer from "@/components/bmf/footer";
 
 export const metadata: Metadata = {
   title: {
-    default: '新应用 | 扣子编程',
-    template: '%s | 扣子编程',
+    default: "BMForum 7 - 论坛",
+    template: "%s - BMForum 7",
   },
-  description:
-    '扣子编程是一款一站式云端 Vibe Coding 开发平台。通过对话轻松构建智能体、工作流和网站，实现从创意到上线的无缝衔接。',
-  keywords: [
-    '扣子编程',
-    'Coze Code',
-    'Vibe Coding',
-    'AI 编程',
-    '智能体搭建',
-    '工作流搭建',
-    '网站搭建',
-    '网站部署',
-    '全栈开发',
-    'AI 工程师',
-  ],
-  authors: [{ name: 'Coze Code Team', url: 'https://code.coze.cn' }],
-  generator: 'Coze Code',
-  // icons: {
-  //   icon: '',
-  // },
-  openGraph: {
-    title: '扣子编程 | 你的 AI 工程师已就位',
-    description:
-      '我正在使用扣子编程 Vibe Coding，让创意瞬间上线。告别拖拽，拥抱心流。',
-    url: 'https://code.coze.cn',
-    siteName: '扣子编程',
-    locale: 'zh_CN',
-    type: 'website',
-    // images: [
-    //   {
-    //     url: '',
-    //     width: 1200,
-    //     height: 630,
-    //     alt: '扣子编程 - 你的 AI 工程师',
-    //   },
-    // ],
-  },
-  // twitter: {
-  //   card: 'summary_large_image',
-  //   title: 'Coze Code | Your AI Engineer is Here',
-  //   description:
-  //     'Build and deploy full-stack applications through AI conversation. No env setup, just flow.',
-  //   // images: [''],
-  // },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  description: "基于 TypeScript + PostgreSQL 复刻的经典 BMForum 论坛系统",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [auth, config] = await Promise.all([getAuth(), getSiteConfig()]);
   return (
-    <html lang="en">
-      <body className={`antialiased`}>
-        {children}
+    <html lang="zh-CN">
+      <body className="antialiased bg-white pt-10">
+        <Navbar
+          user={
+            auth.user
+              ? {
+                  userid: auth.user.userid,
+                  username: auth.user.username,
+                  usergroup: auth.user.usergroup,
+                  newmess: auth.user.newmess,
+                }
+              : null
+          }
+          isAdmin={auth.isAdmin}
+          boardTitle={config.bbstitle}
+        />
+        <div className="bmf-wrap" id="top">
+          {children}
+          <Footer footerText={config.footer} />
+        </div>
       </body>
     </html>
   );
