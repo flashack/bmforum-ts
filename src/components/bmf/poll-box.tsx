@@ -103,10 +103,10 @@ export default function PollBox({
               ) : (
                 <span className="inline-block h-2 w-2 rounded-full bg-[#3083be]" />
               )}
-              <span className="min-w-[120px]">{o.text}</span>
+              <span className="min-w-[80px] md:min-w-[120px]">{o.text}</span>
               {hideResult ? null : (
                 <>
-                  <span className="relative h-4 flex-1 overflow-hidden rounded-[2px] bg-[#eef4fa]">
+                  <span className="relative h-4 min-w-[100px] flex-1 overflow-hidden rounded-[2px] bg-[#eef4fa]">
                     <span
                       className="absolute left-0 top-0 h-full bg-[#3083be]/70 transition-all"
                       style={{ width: `${barPct}%` }}

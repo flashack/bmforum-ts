@@ -15,11 +15,11 @@ export default function Pagination({ total, page, pages, baseHref }: Props) {
     else if (nums[nums.length - 1] !== "…") nums.push("…");
   }
   return (
-    <div className="flex items-center gap-2 text-xs text-[#666]">
-      <span>
+    <div className="flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#666]">
+      <span className="whitespace-nowrap">
         共 {total} 条 / {pages} 页
       </span>
-      <span className="flex gap-1">
+      <span className="flex max-w-full flex-wrap gap-1">
         {nums.map((n, i) =>
           n === "…" ? (
             <span key={`e${i}`} className="px-1 text-[#999]">

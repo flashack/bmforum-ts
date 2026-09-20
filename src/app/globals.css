@@ -647,3 +647,81 @@ html[data-bmf-style="wine"] {
 .bmf-digg:hover {
   background: #e2ecf5;
 }
+
+/* ============================================================
+   移动端适配（<768px）：保持桌面经典观感，小屏收纳与堆叠
+   ============================================================ */
+
+/* 帖子图片防溢出（所有屏宽生效） */
+.bmf-article img,
+.bmf-article video,
+.bmf-article iframe {
+  max-width: 100%;
+  height: auto;
+}
+
+@media (max-width: 767px) {
+  /* 内容层：收窄留白，保证 320px 宽度不横向溢出 */
+  .bmf-wrap {
+    padding: 0 6px;
+  }
+
+  /* 顶部 Logo 区与面包屑 */
+  .bmf-logo-bar {
+    padding: 10px 0 8px;
+  }
+  .bmf-logo-title {
+    font-size: 18px;
+  }
+  .bmf-navi {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    font-size: 12px;
+  }
+
+  /* 表头/标题条允许换行（发帖按钮挤不下时折行） */
+  .bmf-table-header {
+    flex-wrap: wrap;
+    gap: 4px 8px;
+  }
+  .bmf-col-head,
+  .bmf-row {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  /* 帖子阅读：左右两栏 → 上下堆叠，作者卡变顶部信息条 */
+  .bmf-post-row {
+    flex-direction: column;
+  }
+  .bmf-post-author {
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid #dddddd;
+    padding: 8px 10px;
+    text-align: left;
+  }
+  .bmf-post-main {
+    padding: 10px 8px;
+  }
+
+  /* 表情面板：固定 9 列改为自适应列数 */
+  .bmf-emot-panel {
+    grid-template-columns: repeat(auto-fill, 34px);
+    justify-content: center;
+  }
+
+  /* 投票比例条行允许换行 */
+  .bmf-trade,
+  .bmf-hbox {
+    overflow-wrap: anywhere;
+  }
+}
+
+/* 中屏（平板）：帖子页作者卡收窄 */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .bmf-post-author {
+    width: 140px;
+  }
+}

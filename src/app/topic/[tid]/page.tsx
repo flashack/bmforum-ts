@@ -238,13 +238,13 @@ export default async function TopicPage({
       {/* 主题标题栏 */}
       <div className="bmf-table-box">
         <div className="bmf-table-header">
-          <span className="flex items-center gap-2">
+          <span className="flex min-w-0 items-center gap-2">
             {thread.toptype === 1 && <span className="bmf-new !bg-[#e0871c]">置顶</span>}
             {thread.toptype === 2 && <span className="bmf-new !bg-[#8a6d3b]">精华</span>}
             {thread.islock === 1 && <span className="bmf-new !bg-[#999999]">锁定</span>}
-            <span className="text-[15px]">{thread.title}</span>
+            <span className="break-all text-[15px]">{thread.title}</span>
           </span>
-          <span className="flex items-center gap-2 text-xs font-normal">
+          <span className="flex flex-wrap items-center gap-2 text-xs font-normal">
             <DiggButton
               tid={tid}
               initial={diggcount?.diggcount ?? 0}
@@ -302,13 +302,13 @@ export default async function TopicPage({
                 </div>
               </div>
               <div className="bmf-post-main">
-                <div className="mb-2 flex items-center justify-between border-b border-[#f0f0f0] pb-1 text-xs text-[#999]">
-                  <span>{post.articletitle || ""}</span>
-                  <span>
-                    <span className="mr-2">
+                <div className="mb-2 flex items-center justify-between gap-2 border-b border-[#f0f0f0] pb-1 text-xs text-[#999]">
+                  <span className="min-w-0 flex-1 truncate">{post.articletitle || ""}</span>
+                  <span className="flex-shrink-0">
+                    <span className="mr-2 hidden md:inline">
                       <Link href={`/profile/${post.usrid}`}>查看资料</Link>
                     </span>
-                    <span className="mr-2">
+                    <span className="mr-2 hidden md:inline">
                       <Link href={`/messenger?to=${encodeURIComponent(post.username)}`}>发送短消息</Link>
                     </span>
                     <b className="text-[#3083be]">#{floor}</b>
@@ -324,8 +324,8 @@ export default async function TopicPage({
                     <span dangerouslySetInnerHTML={{ __html: parseBmbCode(author.signtext) }} />
                   </div>
                 ) : null}
-                <div className="mt-3 flex items-center justify-between text-xs text-[#999]">
-                  <span>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-[#999]">
+                  <span className="max-w-full break-all">
                     发帖时间：{fmtTime(post.timestamp)}
                     {post.changtime > post.timestamp ? `（编辑于 ${fmtTime(post.changtime)}）` : ""}
                     {post.editinfo ? (() => {
@@ -338,7 +338,7 @@ export default async function TopicPage({
                       ) : null;
                     })() : null}
                   </span>
-                  <span className="flex items-center gap-3">
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                     {isMod && post.ip ? (
                       <span className="text-[#999]" title={`发帖IP：${post.ip}`}>
                         IP：{post.ip}

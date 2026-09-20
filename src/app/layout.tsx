@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { getAuth } from "@/lib/auth";
@@ -12,6 +12,11 @@ export const metadata: Metadata = {
     template: "%s - BMForum 7",
   },
   description: "基于 TypeScript + PostgreSQL 复刻的经典 BMForum 论坛系统",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default async function RootLayout({

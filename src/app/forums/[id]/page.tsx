@@ -100,10 +100,10 @@ export default async function ForumPage({
         </div>
         <div className="bmf-col-head flex">
           <span className="flex-1">主题</span>
-          <span className="w-24 text-center">作者</span>
+          <span className="hidden w-24 text-center md:block">作者</span>
           <span className="w-14 text-center">回复</span>
-          <span className="w-14 text-center">浏览</span>
-          <span className="w-40 text-center">最后回复</span>
+          <span className="hidden w-14 text-center md:block">浏览</span>
+          <span className="w-28 text-center md:w-40">最后回复</span>
         </div>
 
         {threads.length === 0 ? (
@@ -134,12 +134,12 @@ export default async function ForumPage({
                   <span className="mt-0.5 truncate text-xs text-[#999]">{t.newdesc}</span>
                 )}
               </div>
-              <div className="w-24 flex-shrink-0 truncate text-center text-xs">
+              <div className="hidden w-24 flex-shrink-0 truncate text-center text-xs md:block">
                 <Link href={`/profile/${t.authorid}`}>{t.author}</Link>
               </div>
               <div className="w-14 flex-shrink-0 text-center text-xs text-[#666]">{t.replys}</div>
-              <div className="w-14 flex-shrink-0 text-center text-xs text-[#666]">{t.hits}</div>
-              <div className="w-40 flex-shrink-0 text-center text-xs text-[#999]">
+              <div className="hidden w-14 flex-shrink-0 text-center text-xs text-[#666] md:block">{t.hits}</div>
+              <div className="w-28 min-w-0 flex-shrink-0 text-center text-xs text-[#999] md:w-40">
                 {t.lastreply ? (
                   <>
                     {t.lastreply}

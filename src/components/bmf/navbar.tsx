@@ -13,6 +13,8 @@ export interface NavUser {
 interface MenuDef {
   label: string;
   href?: string;
+  /** 小屏（<768px）隐藏该菜单项，避免导航栏溢出 */
+  hideOnMobile?: boolean;
   items?: { label: string; href: string; badge?: number; divider?: boolean; style?: string }[];
 }
 
@@ -61,6 +63,7 @@ export default function Navbar({
     },
     {
       label: "界面风格",
+      hideOnMobile: true,
       items: [
         { label: "经典蓝（默认）", href: "", style: "default" },
         { label: "青竹绿", href: "", style: "green" },
@@ -94,28 +97,37 @@ export default function Navbar({
 
   return (
     <nav ref={ref} className="bmf-navbar fixed top-0 left-0 right-0 z-[1030] h-10">
-      <div className="mx-auto flex h-full items-center px-4" style={{ maxWidth: 970 }}>
-        <Link href="/" className="px-2 py-1.5 font-bold text-white hover:!bg-transparent">
+      <div className="mx-auto flex h-full w-full items-center px-2 sm:px-4" style={{ maxWidth: 970 }}>
+        <Link
+          href="/"
+          className="max-w-[140px] truncate px-2 py-1.5 font-bold text-white hover:!bg-transparent sm:max-w-none"
+        >
           {boardTitle}
         </Link>
         <ul className="flex items-stretch text-[13px]">
           {leftMenus.map((m) =>
             m.href ? (
-              <li key={m.label}>
-                <Link className="block px-3 py-2" href={m.href}>
+              <li key={m.label} className={m.hideOnMobile ? "hidden md:block" : undefined}>
+                <Link className="block px-2 py-2 sm:px-3" href={m.href}>
                   {m.label}
                 </Link>
               </li>
             ) : (
-              <DropDown key={m.label} m={m} open={open === m.label} onToggle={() => setOpen(open === m.label ? null : m.label)} />
+              <li key={m.label} className={m.hideOnMobile ? "hidden md:block" : undefined}>
+                <DropDown
+                  m={m}
+                  open={open === m.label}
+                  onToggle={() => setOpen(open === m.label ? null : m.label)}
+                />
+              </li>
             )
           )}
           <li>
-            <Link className="block px-3 py-2" href="/search">
+            <Link className="block px-2 py-2 sm:px-3" href="/search">
               搜索
             </Link>
           </li>
-          <li>
+          <li className="hidden md:block">
             <Link className="block px-3 py-2" href="/faq">
               帮助
             </Link>
@@ -125,7 +137,7 @@ export default function Navbar({
           {userMenus.map((m) =>
             m.href ? (
               <li key={m.label}>
-                <Link className="block px-3 py-2" href={m.href}>
+                <Link className="block px-2 py-2 sm:px-3" href={m.href}>
                   {m.label}
                 </Link>
               </li>

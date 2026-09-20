@@ -361,7 +361,7 @@ export default function PostEditor({
                   placeholder={"可选。每行一个投票选项（至少 2 行）发起投票，如：\nDiscuz!\nPHPWind\nBMForum"}
                 />
                 {pollText.trim() && (
-                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-[#444]">
+                  <div className="mt-2 grid max-md:grid-cols-1 grid-cols-2 gap-x-4 gap-y-1 text-xs text-[#444]">
                     <label className="flex items-center gap-2">
                       <input type="radio" checked={pollType === "s"} onChange={() => setPollType("s")} className="accent-[#3083be]" />
                       单选

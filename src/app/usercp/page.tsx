@@ -70,7 +70,7 @@ export default async function UsercpPage({ searchParams }: { searchParams: Promi
             查看我的公开资料 »
           </Link>
         </div>
-        <div className="bmf-col-head flex gap-4">
+        <div className="bmf-col-head flex flex-wrap gap-x-4 gap-y-1">
           {TABS.map(([key, label]) => (
             <Link key={key} href={`/usercp?tab=${key}`} className={tab === key ? "font-bold text-[#3083be]" : ""}>
               {label}

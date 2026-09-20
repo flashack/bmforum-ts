@@ -65,7 +65,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ uid: s
               className="mx-auto border border-[#dddddd]"
             />
           </div>
-          <div className="grid flex-1 grid-cols-2 gap-x-8 gap-y-1 text-[13px]">
+          <div className="grid max-md:grid-cols-1 flex-1 grid-cols-2 gap-x-8 gap-y-1 text-[13px]">
             <div>
               <span className="text-[#999]">头衔：</span>
               {user.desper || "新手上路"}

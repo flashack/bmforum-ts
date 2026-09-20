@@ -129,9 +129,9 @@ export default async function HomePage() {
             </div>
             <div className="bmf-col-head flex">
               <span className="flex-1">论坛</span>
-              <span className="w-16 text-center">主题</span>
-              <span className="w-16 text-center">回复</span>
-              <span className="w-56 text-center">最后发表</span>
+              <span className="hidden w-16 text-center md:block">主题</span>
+              <span className="hidden w-16 text-center md:block">回复</span>
+              <span className="w-36 text-center md:w-56">最后发表</span>
             </div>
             {list.map((f) => {
               const mods = f.blad ? f.blad.split(",").filter(Boolean) : [];
@@ -177,15 +177,15 @@ export default async function HomePage() {
                       </div>
                     )}
                   </div>
-                  <div className="w-16 text-center text-[#666]">{f.topicnum}</div>
-                  <div className="w-16 text-center text-[#666]">{f.replysnum}</div>
-                  <div className="w-56 text-center text-xs text-[#666]">
+                  <div className="hidden w-16 text-center text-[#666] md:block">{f.topicnum}</div>
+                  <div className="hidden w-16 text-center text-[#666] md:block">{f.replysnum}</div>
+                  <div className="w-36 min-w-0 text-center text-xs text-[#666] md:w-56">
                     {f.fltitle ? (
                       <>
                         <Link href={`/forums/${f.id}`} className="block truncate text-[#3083be]" title={f.fltitle}>
                           {f.fltitle}
                         </Link>
-                        <span className="text-[#999]">
+                        <span className="block truncate text-[#999]">
                           {f.flposter} · {fmtRelative(f.flposttime)}
                         </span>
                       </>
