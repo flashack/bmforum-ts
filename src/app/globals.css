@@ -725,3 +725,98 @@ html[data-bmf-style="wine"] {
     width: 140px;
   }
 }
+
+/* ===== 所见即所得编辑器（复刻 nicEdit panelInstance） ===== */
+.bmf-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  color: #444;
+  border-radius: 2px;
+  cursor: pointer;
+  gap: 2px;
+}
+.bmf-tool-btn:hover {
+  background: #e8f1f8;
+  border-color: #3083be;
+}
+.bmf-tool-select {
+  height: 24px;
+  border: 1px solid #ccc;
+  background: #fff;
+  font-size: 12px;
+  border-radius: 2px;
+}
+.bmf-color-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #999;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.bmf-rich-area {
+  padding: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  background: #fff;
+  overflow-y: auto;
+  outline: none;
+  min-width: 0;
+}
+.bmf-rich-area:empty::before {
+  content: attr(data-placeholder);
+  color: #999;
+}
+.bmf-rich-area img[data-emo] {
+  display: inline-block;
+  vertical-align: middle;
+}
+.bmf-rich-area blockquote {
+  border-left: 3px solid #3083be;
+  background: #f5f5f5;
+  margin: 4px 0;
+  padding: 4px 8px;
+  color: #666;
+}
+.bmf-rich-area pre[data-bmb="code"] {
+  background: #f7f7f7;
+  border: 1px solid #ddd;
+  padding: 6px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 4px 0;
+}
+.bmf-rich-area b,
+.bmf-rich-area strong {
+  font-weight: bold;
+}
+.bmf-tab-on,
+.bmf-tab-off {
+  padding: 2px 10px;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.bmf-tab-on {
+  background: #3083be;
+  color: #fff;
+  font-weight: bold;
+}
+.bmf-tab-off {
+  background: #fff;
+  border: 1px solid #ccc;
+  color: #444;
+}
+.bmf-tab-off:hover {
+  border-color: #3083be;
+  color: #3083be;
+}

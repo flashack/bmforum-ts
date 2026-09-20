@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { parseBmbCode, EMOTICONS } from "@/lib/bmbcode";
+import { parseBmbCode } from "@/lib/bmbcode";
+import RichEditor, { type RichEditorHandle } from "@/components/bmf/rich-editor";
 
 export interface EditorForum {
   id: number;
@@ -66,26 +67,11 @@ export default function PostEditor({
   const [asBeg, setAsBeg] = useState(false);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const areaRef = useRef<HTMLTextAreaElement>(null);
+  const richRef = useRef<RichEditorHandle | null>(null);
   const [preview, setPreview] = useState(false);
-  const [showEmot, setShowEmot] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [attachMsg, setAttachMsg] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
-
-  function insert(left: string, right = "") {
-    const el = areaRef.current;
-    if (!el) return;
-    const start = el.selectionStart ?? content.length;
-    const end = el.selectionEnd ?? content.length;
-    const next = content.slice(0, start) + left + content.slice(start, end) + right + content.slice(end);
-    setContent(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      el.selectionStart = start + left.length;
-      el.selectionEnd = end + left.length;
-    });
-  }
 
   async function uploadAttachment() {
     const file = fileRef.current?.files?.[0];
@@ -109,7 +95,7 @@ export default function PostEditor({
         setAttachMsg(data.error || "上传失败");
         return;
       }
-      insert(`[attach=${data.id}]`);
+      richRef.current?.insertAtCursor(`[attach=${data.id}]`);
       setAttachMsg(`已上传：${file.name}`);
       if (fileRef.current) fileRef.current.value = "";
     } finally {
@@ -119,6 +105,9 @@ export default function PostEditor({
 
   async function submit() {
     setMsg("");
+    // 所见即所得模式先转回 BMBCode 再校验
+    const rawContent = richRef.current ? richRef.current.getBmbcode() : content;
+    setContent(rawContent);
     if (!isReply && !forumid) {
       setMsg("请选择版块");
       return;
@@ -127,12 +116,12 @@ export default function PostEditor({
       setMsg("请填写标题");
       return;
     }
-    if (!content.trim()) {
+    if (!rawContent.trim()) {
       setMsg("请填写内容");
       return;
     }
     // 交易包裹（复刻原版顺序：[pay=] 最内 → [gift=] → [beg] 最外）
-    let finalContent = content;
+    let finalContent = rawContent;
     if (asSell && /^\d{1,9}$/.test(sellMoney)) finalContent = `[pay=${sellMoney}]${finalContent}[/pay]`;
     if (asGift && /^\d{1,9}$/.test(giftMoney)) finalContent = `[gift=${giftMoney}]${finalContent}[/gift]`;
     if (asBeg) finalContent = `[beg]${finalContent}[/beg]`;
@@ -201,23 +190,6 @@ export default function PostEditor({
     }
   }
 
-  const TOOLBAR: [string, string, string][] = [
-    ["加粗", "[b]", "[/b]"],
-    ["斜体", "[i]", "[/i]"],
-    ["下划线", "[u]", "[/u]"],
-    ["删除线", "[s]", "[/s]"],
-    ["引用", "[quote]", "[/quote]"],
-    ["代码", "[code]", "[/code]"],
-    ["链接", "[url=https://]", "[/url]"],
-    ["图片", "[img]", "[/img]"],
-    ["列表", "[list=1][*]项", "[/list]"],
-    ["居中", "[center]", "[/center]"],
-    ["分割线", "[hr]", ""],
-    ["出售", "[sell=10]", "[/sell]"],
-    ["礼金", "[gift=10]", "[/gift]"],
-    ["求赏", "[beg]", "[/beg]"],
-  ];
-
   return (
     <div className="bmf-table-box">
       <div className="bmf-table-header">
@@ -275,55 +247,11 @@ export default function PostEditor({
           <div className="grid grid-cols-[90px_1fr] items-start gap-2">
             <span className="bmf-label !mb-0 pt-2 text-right">帖子内容</span>
             <div>
-              <div className="mb-1 flex flex-wrap gap-1">
-                {TOOLBAR.map(([label, l, r]) => (
-                  <button key={label} type="button" className="bmf-btn !py-0.5 !text-xs" onClick={() => insert(l, r)}>
-                    {label}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  className="bmf-btn !py-0.5 !text-xs"
-                  onClick={() => insert("[color=red]", "[/color]")}
-                >
-                  红色
-                </button>
-                <button
-                  type="button"
-                  className="bmf-btn !py-0.5 !text-xs"
-                  onClick={() => insert("[size=4]", "[/size]")}
-                >
-                  大字
-                </button>
-                <button
-                  type="button"
-                  className="bmf-btn !py-0.5 !text-xs"
-                  onClick={() => setShowEmot(!showEmot)}
-                >
-                  表情
-                </button>
-              </div>
-              {showEmot && (
-                <div className="bmf-emot-panel">
-                  {EMOTICONS.map((e) => (
-                    <button
-                      key={e.file}
-                      type="button"
-                      title={e.name}
-                      onClick={() => insert(`[s:${e.file.replace(".gif", "")}]`)}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`/face/${e.file}`} alt={e.name} width={28} height={28} />
-                    </button>
-                  ))}
-                </div>
-              )}
-              <textarea
-                ref={areaRef}
-                className="bmf-input font-sans"
-                rows={12}
+              <RichEditor
+                ref={richRef}
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
+                minHeight={280}
                 placeholder="支持 BMBCode：[b]加粗[/b] [quote]引用[/quote] [code]代码[/code] [img]图片[/img] [url=https://...]链接[/url]，交易标签：[sell=金额]出售内容[/sell] [gift=金额]礼金[/gift] [beg]求赏[/beg]，表情 [s:icon1100]"
               />
               {canUpload && (
@@ -337,7 +265,14 @@ export default function PostEditor({
                 </div>
               )}
               <div className="mt-1 flex gap-2 text-xs">
-                <button type="button" className="bmf-btn !py-0.5" onClick={() => setPreview(!preview)}>
+                <button
+                  type="button"
+                  className="bmf-btn !py-0.5"
+                  onClick={() => {
+                    setContent(richRef.current ? richRef.current.getBmbcode() : content);
+                    setPreview(!preview);
+                  }}
+                >
                   {preview ? "关闭预览" : "预览内容"}
                 </button>
               </div>

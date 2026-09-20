@@ -16,6 +16,7 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **投票系统（原版 vote.php/poll.htm）**：polls.setting 含 maxchoose/viewafter/deadline/minposts；POST `/api/threads/[tid]/vote` {choices:[...]}（登录/canvote/未锁定/未投过/多选上限/到期/最低发帖数校验）；列表图标 threads.type=1；帖子页 PollBox（viewafter 未投不显结果、参与者下拉、到期截止、比例条）；发帖表单投票设置（单选/多选/最多可选/投票后可见/到期日/最低发帖）
 - **主题管理（原版 manage.php/manage2.php）**：POST `/api/threads/[tid]/manage` action=sticky(level 0-3 分级置顶)/digest(加精联动作者 digestmount±1+版块 digestcount±1)/lock/front(提前)/move/copy(复制主题+计数)/trash/delete(楼主可自删 0 回复主题并扣作者积分)；单帖管理 POST `/api/posts/[id]/manage` action=trash/del/recover（posttrash 列，版主在帖内可见"恢复"）；帖子页 TopicTools 工具栏
 - **帖子细节**：posts.editinfo（"时间戳|用户名"，渲染 `[此帖于 T 由 X 编辑]`）；posts.ip（发帖 IP，仅版主/管理员可见）；发帖/回复/编辑记录 IP；PostEditor 交易复选框（出售金额/礼金金额/求赏，自动包裹 [pay=]/[gift=]/[beg]）
+- **所见即所得编辑器（复刻原版 nicEdit panelInstance）**：`src/components/bmf/rich-editor.tsx` + 转换核心 `src/lib/rich-text.ts`；双模式（富文本 contentEditable / BMBCode 源码）工具栏（B/I/U/S/上下标/对齐/列表/缩进/链接/图片/引用/代码/表情/字号/颜色），提交前经 `RichEditorHandle.getBmbcode()` 转回 BMBCode；交易/隐藏类标签在编辑态原样显示；**首帖判定约定 = 该 tid 下 min(posts.id)**（种子/测试数据须保证首帖 id 最小）
 - **首页**：在线列表（whosonline）+ 今日生日块（userlist.birthday 匹配当天 MM-DD，显示 名字(年龄)）
 - **短消息（原版 messenger.php）**：inbox/outbox + action=clear 清空信箱（ClearBoxButton）
 - **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`；结构 `db/schema.sql`（生产首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后需重新 pg_dump 导出）；生产环境由 `scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底）
