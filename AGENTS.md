@@ -25,6 +25,31 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **会话认证**：cookie `bmf_sid`（sessions 表，`src/lib/auth.ts`）；**cookie 属性按 x-forwarded-proto 动态切换**：https 访问（含 iframe 预览的跨站上下文）用 `SameSite=None; Secure`，http 用 `SameSite=Lax`——否则 iframe 中登录后 cookie 被浏览器阻止，表现为"登录成功但仍是未登录状态"；登录/注册成功后前端用 `window.location.assign("/")` 全量跳转（auth-form.tsx），退出登录 GET /api/auth/logout 返回相对路径 307
 - **时区**：全站统一东八区。三层保障：dev.sh/start.sh `export TZ=Asia/Shanghai`（Node 进程）；prod-db.mjs 建库后 `ALTER DATABASE ... SET timezone TO 'Asia/Shanghai'`；`src/lib/format.ts` fmtTime/fmtDate/fmtFullDate/fmtShortTime/cnYear/cnDayStart 显式 +8 偏移计算（勿在组件里直接用 Date.now/new Date 格式化——ESLint react-hooks/purity 会拦截，走 format.ts 辅助函数）；生日匹配 SQL 用 `now() AT TIME ZONE 'Asia/Shanghai'`
 
+## 历史踩坑记录（MUST READ——每条都真实发生过，勿重犯）
+
+### 数据库 / 部署类（两次部署失败均源于此）
+
+1. **空库引导漏建表 → 部署全站 500**（第 1 次部署失败）：prod-db.mjs 空库分支曾只灌 seed.sql（纯 INSERT）而不执行 schema.sql，生产首次启动 `relation "xxx" does not exist`。**规范**：任何"空库初始化"流程必须 schema 建表在前、种子灌入在后；改动 prod-db.mjs 后必须 DROP 库重建空库完整重演一遍再交付。
+2. **种子里的 bytea 字面量格式错误 → 灌库失败**（第 2 次部署失败）：dump-seed.mjs 曾生成 `decode('\x...','hex')`——`\x` 是 escape 格式转义，PG hex 格式只接受纯十六进制。**规范**：生成 SQL 字面量后必须真实执行一遍验证（本地空库灌入），不能只看文件内容像对就行。
+3. **环境没有 pg_dump/psql**：embedded-postgres 只带 initdb/pg_ctl/postgres 三个二进制，系统 PATH 里也没有客户端工具。**规范**：种子导出用 `node scripts/dump-seed.mjs`（纯 node pg 实现）；验证性查询用 `node -e` + node_modules/pg。
+4. **种子混入运行时数据**：直接导全库会把 sessions/onlinestat/notification/primsg、测试期间产生的 adminlog 等一起带进种子基线。**规范**：dump-seed.mjs 导出前先清运行时表与测试残留，导出后 grep 各表行数对账。
+5. **/tmp/bmf7-pgdata 会被系统清理**：PG 进程与数据目录随时可能消失，表现为全站 ECONNREFUSED 500。**规范**：不要手动救数据——dev.sh/start.sh 启动时自动跑 prod-db.mjs 自愈（缺失即 initdb+灌种子），重启预览即可恢复。
+6. **psql/node 单条 query 多语句不原子**：多步 DML（如批量 id 重排）中途失败会留下半完成状态，重试还会撞唯一键。**规范**：批量数据变更一律用 node pg 显式事务（BEGIN/COMMIT），出错回滚重跑。
+7. **posts.id 重排**：直接链式 UPDATE 会撞主键冲突，需借助临时偏移（+100000 → 200000+new → new）分步落位；且**首帖判定 = 该 tid 下 min(posts.id)**，任何数据操作必须保证首帖 id 最小。
+
+### 前端 / 规范类
+
+8. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
+9. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
+10. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
+11. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
+
+### 流程类
+
+12. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
+13. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
+14. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
+
 ### 版本技术栈
 
 - **Framework**: Next.js 16 (App Router)
