@@ -175,16 +175,27 @@ function seedSql() {
 /** 增量迁移文件（幂等：IF NOT EXISTS / ON CONFLICT DO NOTHING），按文件名序执行 */
 const MIGRATIONS = ['db/migrate2.sql', 'db/migrate3.sql', 'db/migrate4.sql', 'db/migrate5.sql'];
 
-async function ensureSchema(client, label) {
+async function ensureSchema(client, label, targetHost = '') {
+  const hostTag = targetHost ? ` @ ${targetHost}` : '';
   const hasTable = await client.query("SELECT to_regclass('public.userlist') AS t");
   if (!hasTable.rows[0].t) {
-    console.log(`[bmf7-db] ${label} 空库，执行 db/schema.sql 建表`);
+    console.log(`[bmf7-db] ${label}${hostTag} 空库，执行 db/schema.sql 建表`);
     await client.query(readSqlFile('db/schema.sql'));
-    console.log(`[bmf7-db] ${label} 建表完成，灌入种子数据 db/seed.sql`);
+    console.log(`[bmf7-db] ${label}${hostTag} 建表完成，灌入种子数据 db/seed.sql`);
     await client.query(seedSql());
     console.log('[bmf7-db] 种子数据完成');
   } else {
-    console.log(`[bmf7-db] ${label} 已初始化，跳过种子数据`);
+    // 有表但业务数据为空（部署环境可能注入仅含结构的库）——补灌种子自愈
+    const cnt = await client.query(
+      'SELECT (SELECT count(*) FROM userlist) AS users, (SELECT count(*) FROM forumdata) AS forums'
+    );
+    if (Number(cnt.rows[0].users) === 0 && Number(cnt.rows[0].forums) === 0) {
+      console.log(`[bmf7-db] ${label}${hostTag} 有表无数据，补灌种子数据 db/seed.sql`);
+      await client.query(seedSql());
+      console.log('[bmf7-db] 种子补灌完成');
+    } else {
+      console.log(`[bmf7-db] ${label}${hostTag} 已初始化，跳过种子数据`);
+    }
   }
   // 幂等增量迁移：无论新旧库每次兜底执行（schema.sql 落后于增量时自动补齐列/表）
   for (const m of MIGRATIONS) {
@@ -212,8 +223,9 @@ async function tryExternalDb() {
   try {
     const client = new pg.Client({ connectionString: envUrl, connectionTimeoutMillis: 5000 });
     await client.connect();
-    console.log('[bmf7-db] 外部数据库连接串可用，采用外部数据库（数据持久化）');
-    await ensureSchema(client, '外部数据库');
+    const extHost = new URL(envUrl).host;
+    console.log(`[bmf7-db] 外部数据库连接串可用，采用外部数据库（数据持久化）@ ${extHost}`);
+    await ensureSchema(client, '外部数据库', extHost);
     // 全站统一东八区：外部库也持久化时区（托管库权限受限时跳过，不影响 format.ts 显式 +8 渲染）
     try {
       const dbName = new URL(envUrl).pathname.replace(/^\//, '') || 'postgres';

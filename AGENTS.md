@@ -38,19 +38,20 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 7. **psql/node 单条 query 多语句不原子**：多步 DML（如批量 id 重排）中途失败会留下半完成状态，重试还会撞唯一键。**规范**：批量数据变更一律用 node pg 显式事务（BEGIN/COMMIT），出错回滚重跑。
 8. **posts.id 重排**：直接链式 UPDATE 会撞主键冲突，需借助临时偏移（+100000 → 200000+new → new）分步落位；且**首帖判定 = 该 tid 下 min(posts.id)**，任何数据操作必须保证首帖 id 最小。
 9. **schema.sql 落后于增量迁移 → 全新库缺列**：contacts.type 等列是后来经 db/migrate*.sql 增量加的而 schema.sql 未同步，空库引导只跑 schema+seed 时新库缺列，好友接口 500（`column "contacts.type" does not exist`）。**已修复**：prod-db.mjs 的 ensureSchema 每次启动幂等兜底执行全部 migrate。**规范**：新增列时写 migrate 后评估是否同步进 schema.sql；交付前用 information_schema 对新旧库做列级对账（单表 count 对不出来）。
+10. **沙箱与生产注入的 PGDATABASE_URL 是不同实例 → 部署后页面全空**：生产部署容器连的托管库可能只含表结构（有表无数据），ensureSchema 的 to_regclass 判定"已初始化"而跳过种子——页面统计 0、版块列表空、无报错。**已修复**：ensureSchema 对"userlist 与 forumdata 均为 0 行"的库自动补灌种子（自愈）；引导日志打印目标库 host（`[bmf7-db] ... @ 主机名`），排查时先核对生产与沙箱是否同一实例。
 
 ### 前端 / 规范类
 
-10. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
-11. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
-12. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
-13. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
+11. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
+12. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
+13. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
+14. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
 
 ### 流程类
 
-14. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
-15. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
-16. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
+15. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
+16. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
+17. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
 
 ### 版本技术栈
 
