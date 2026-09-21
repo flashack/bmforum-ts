@@ -319,6 +319,8 @@ async function bootstrapEmbedded() {
     await sysClient.query(`CREATE DATABASE "${target.db}" WITH ENCODING 'UTF8'${owner}`);
     console.log(`[bmf7-db] 已创建数据库 ${target.db}`);
   }
+  // 全站统一东八区：持久化数据库时区（initdb 默认取容器时区，通常为 UTC）
+  await sysClient.query(`ALTER DATABASE "${target.db}" SET timezone TO 'Asia/Shanghai'`);
   await sysClient.end();
 
   // 种子数据：优先用目标角色连接，失败回退超级用户

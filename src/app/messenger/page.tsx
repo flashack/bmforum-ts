@@ -6,7 +6,7 @@ import NaviBar from "@/components/bmf/navi-bar";
 import ComposeForm from "@/components/bmf/compose-form";
 import MessageActions from "@/components/bmf/message-actions";
 import ClearBoxButton from "@/components/bmf/clear-box-button";
-import { fmtTime, fmtRelative } from "@/lib/format";
+import { fmtTime, fmtShortTime, fmtRelative } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "短消息" };
@@ -140,10 +140,13 @@ export default async function MessengerPage({
                     m.prtitle
                   )}
                 </span>
-                <span className="w-28 flex-shrink-0 truncate text-xs text-[#666]">
+                <span className="w-24 flex-shrink-0 truncate text-xs text-[#666] max-md:w-20">
                   {tab === "inbox" ? `来自：${m.sender}` : `发给：${m.sendto}`}
                 </span>
-                <span className="w-36 flex-shrink-0 text-right text-xs text-[#999]">{fmtTime(m.prtime)}</span>
+                <span className="w-36 flex-shrink-0 text-right text-xs text-[#999] max-md:w-24">
+                  <span className="md:hidden">{fmtShortTime(m.prtime)}</span>
+                  <span className="hidden md:inline">{fmtTime(m.prtime)}</span>
+                </span>
                 {tab === "inbox" && (
                   <span className="ml-3 w-10 flex-shrink-0 text-right">
                     <MessageActions id={m.id} />
@@ -168,7 +171,10 @@ export default async function MessengerPage({
                 <span className="flex-1 truncate">
                   <b className="text-[#3083be]">{n.sendername}</b> {n.nvalue}
                 </span>
-                <span className="w-36 flex-shrink-0 text-right text-xs text-[#999]">{fmtTime(n.timestamp)}</span>
+                <span className="w-36 flex-shrink-0 text-right text-xs text-[#999] max-md:w-24">
+                  <span className="md:hidden">{fmtShortTime(n.timestamp)}</span>
+                  <span className="hidden md:inline">{fmtTime(n.timestamp)}</span>
+                </span>
               </div>
             ))
           )

@@ -1,25 +1,55 @@
 /** 通用格式化工具 */
 
+/** 全站统一东八区（UTC+8）显示：显式加偏移后取 UTC 分量，不依赖服务器/容器时区 */
+const CN_OFFSET_MS = 8 * 3600 * 1000;
+
+function cnDate(ts: number): Date {
+  return new Date(ts * 1000 + CN_OFFSET_MS);
+}
+
 export function fmtTime(ts: number): string {
   if (!ts) return "";
-  const d = new Date(ts * 1000);
+  const d = cnDate(ts);
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
 }
 
 export function fmtDate(ts: number): string {
   if (!ts) return "";
-  const d = new Date(ts * 1000);
+  const d = cnDate(ts);
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())}`;
 }
 
 /** 完整日期时间（原版 getfulldate：Y-m-d H:i:s） */
 export function fmtFullDate(ts: number): string {
   if (!ts) return "";
-  const d = new Date(ts * 1000);
+  const d = cnDate(ts);
   const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
+
+/** 短日期时间（移动端展示用：MM-DD HH:MM） */
+export function fmtShortTime(ts: number): string {
+  if (!ts) return "";
+  const d = cnDate(ts);
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+}
+
+/** 当前 Unix 秒 */
+export function nowSec(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+/** 东八区当前年份（周岁计算等） */
+export function cnYear(): number {
+  return new Date(Date.now() + CN_OFFSET_MS).getUTCFullYear();
+}
+
+/** 东八区当天零点的 Unix 秒（"今日新帖"等按天统计的基准） */
+export function cnDayStart(): number {
+  return Math.floor((Date.now() + CN_OFFSET_MS) / 86400000) * 86400 - 8 * 3600;
 }
 
 /** 相对时间（原版风格的简洁表达） */

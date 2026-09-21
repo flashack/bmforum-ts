@@ -205,7 +205,7 @@ export function AnnounceAdmin({ rows }: { rows: AnnRow[] }) {
           <span>
             <b>{a.title}</b>
             <span className="ml-2 text-xs text-[#999]">
-              {a.author} · {new Date(a.addtime * 1000).toLocaleDateString("zh-CN")}
+              {a.author} · {new Date(a.addtime * 1000).toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" })}
             </span>
           </span>
           <button type="button" className="text-xs text-[#cc3311]" onClick={() => del(a.id)}>

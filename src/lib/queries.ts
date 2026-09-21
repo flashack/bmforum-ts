@@ -144,7 +144,7 @@ export async function getTodaysBirthdays(): Promise<
   return query(
     `SELECT userid, username, birthday FROM userlist
      WHERE birthday <> ''
-       AND substr(birthday, 6, 5) = to_char(now(), 'MM-DD')
+       AND substr(birthday, 6, 5) = to_char(now() AT TIME ZONE 'Asia/Shanghai', 'MM-DD')
      ORDER BY userid
      LIMIT 100`
   );

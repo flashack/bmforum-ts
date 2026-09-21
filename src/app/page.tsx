@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getAuth, touchOnline, getOnlineStats } from "@/lib/auth";
 import { getForumList, getSiteStats, getAnnounces, getHotTags, getSiteConfig, getTodaysBirthdays } from "@/lib/queries";
 import NaviBar from "@/components/bmf/navi-bar";
-import { fmtRelative, fmtNumber, groupName, groupColor } from "@/lib/format";
+import { fmtRelative, fmtNumber, groupName, groupColor, cnYear, cnDayStart } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,8 @@ export default async function HomePage() {
     if (!forumMap.has(f.forum_cid)) forumMap.set(f.forum_cid, []);
     forumMap.get(f.forum_cid)!.push(f);
   }
-  const dayStart = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000);
+  // 东八区当天零点（版块"今日新帖"图标高亮基准）
+  const dayStart = cnDayStart();
 
   // 子版块：forum_cid 指向另一个版块（而非分类）的版块，嵌套展示在父版块行下
   const forumIds = new Set(forums.filter((x) => x.type === "forum").map((x) => x.id));
@@ -236,7 +237,8 @@ export default async function HomePage() {
           </div>
           <div className="bmf-row text-xs">
             {birthdays.map((b) => {
-              const age = new Date().getFullYear() - parseInt(b.birthday.slice(0, 4), 10);
+              // 按东八区计算周岁（与生日匹配口径一致）
+              const age = cnYear() - parseInt(b.birthday.slice(0, 4), 10);
               return (
                 <span key={b.userid} className="mr-3">
                   <Link href={`/profile/${b.userid}`} className="font-bold">

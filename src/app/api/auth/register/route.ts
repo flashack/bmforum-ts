@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
   const salt = randomBytes(8).toString("hex");
   const pwd = hashPassword(password, salt);
   const now = Math.floor(Date.now() / 1000);
-  const regdate = new Date().toISOString().slice(0, 10);
+  // 注册日期按东八区
+  const regdate = new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
 
   await transaction(async (c) => {
     await c.query(

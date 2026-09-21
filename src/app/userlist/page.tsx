@@ -66,9 +66,9 @@ export default async function UserListPage({
           <span className="flex-1">会员名</span>
           <span className="w-28 text-center">用户组</span>
           <span className="w-20 text-center">发帖</span>
-          <span className="w-20 text-center">积分</span>
-          <span className="w-28 text-center">来自</span>
-          <span className="w-28 text-center">注册日期</span>
+          <span className="w-20 text-center max-md:hidden">积分</span>
+          <span className="w-28 text-center max-md:hidden">来自</span>
+          <span className="w-28 text-center max-md:hidden">注册日期</span>
         </div>
         {users.map((u, i) => (
           <div key={u.userid} className="bmf-row flex items-center text-[13px]">
@@ -82,9 +82,9 @@ export default async function UserListPage({
             </span>
             <span className="w-28 text-center text-xs">{groupName(u.usergroup)}</span>
             <span className="w-20 text-center text-xs">{fmtNumber(u.postamount)}</span>
-            <span className="w-20 text-center text-xs">{fmtNumber(u.point)}</span>
-            <span className="w-28 truncate text-center text-xs text-[#999]">{u.fromwhere || "—"}</span>
-            <span className="w-28 text-center text-xs text-[#999]">{u.regdate ? u.regdate.slice(0, 10) : "—"}</span>
+            <span className="w-20 text-center text-xs max-md:hidden">{fmtNumber(u.point)}</span>
+            <span className="w-28 truncate text-center text-xs text-[#999] max-md:hidden">{u.fromwhere || "—"}</span>
+            <span className="w-28 text-center text-xs text-[#999] max-md:hidden">{u.regdate ? u.regdate.slice(0, 10) : "—"}</span>
           </div>
         ))}
       </div>

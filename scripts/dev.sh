@@ -9,6 +9,9 @@ DEPLOY_RUN_PORT="${DEPLOY_RUN_PORT:-${PORT}}"
 
 cd "${COZE_WORKSPACE_PATH}"
 
+# 全站统一东八区：Node 进程时区（Date/toLocaleString 基准）
+export TZ="Asia/Shanghai"
+
 list_port_pids() {
     local port=$1
     local pids=""

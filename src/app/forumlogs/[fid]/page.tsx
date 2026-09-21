@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { query, queryOne } from "@/lib/db";
 import { getAuth } from "@/lib/auth";
 import NaviBar from "@/components/bmf/navi-bar";
-import { fmtFullDate } from "@/lib/format";
+import { fmtFullDate, fmtShortTime } from "@/lib/format";
 import LogCleanButton from "@/components/bmf/log-clean-button";
 
 /** 原版 forumlogs.php 动作码 → 中文 */
@@ -119,7 +119,8 @@ export default async function ForumLogsPage({
                 {logs.map((l) => (
                   <tr key={l.id} className="border-b border-[#f0f0f0]">
                     <td className="whitespace-nowrap px-3 py-1.5 text-xs text-[#666]">
-                      {fmtFullDate(l.time)}
+                      <span className="md:hidden">{fmtShortTime(l.time)}</span>
+                      <span className="hidden md:inline">{fmtFullDate(l.time)}</span>
                     </td>
                     <td className="px-3 py-1.5 text-[#3083be]">{l.operator}</td>
                     <td className="px-3 py-1.5">{ACTION_NAMES[l.action] ?? l.action}</td>

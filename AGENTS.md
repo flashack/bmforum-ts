@@ -23,6 +23,7 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **短消息（原版 messenger.php）**：inbox/outbox + action=clear 清空信箱（ClearBoxButton）
 - **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`（嵌入式 PostgreSQL，数据目录 `/tmp/bmf7-pgdata` 可能被系统清理）；结构 `db/schema.sql`（空库自动首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后用 `node scripts/dump-seed.mjs` 重导——环境无 pg_dump，纯 node pg 实现，导出前先清理运行时表 sessions/onlinestat/notification/primsg 测试残留）；`scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底；**空库时自动 schema.sql 建表 → seed.sql 灌数**），dev.sh 与 start.sh 启动时均自动执行（自愈）；**演示账号 admin/bsd_fan/月光骑士/php老兵/水贴之王 密码统一 123456**
 - **会话认证**：cookie `bmf_sid`（sessions 表，`src/lib/auth.ts`）；**cookie 属性按 x-forwarded-proto 动态切换**：https 访问（含 iframe 预览的跨站上下文）用 `SameSite=None; Secure`，http 用 `SameSite=Lax`——否则 iframe 中登录后 cookie 被浏览器阻止，表现为"登录成功但仍是未登录状态"；登录/注册成功后前端用 `window.location.assign("/")` 全量跳转（auth-form.tsx），退出登录 GET /api/auth/logout 返回相对路径 307
+- **时区**：全站统一东八区。三层保障：dev.sh/start.sh `export TZ=Asia/Shanghai`（Node 进程）；prod-db.mjs 建库后 `ALTER DATABASE ... SET timezone TO 'Asia/Shanghai'`；`src/lib/format.ts` fmtTime/fmtDate/fmtFullDate/fmtShortTime/cnYear/cnDayStart 显式 +8 偏移计算（勿在组件里直接用 Date.now/new Date 格式化——ESLint react-hooks/purity 会拦截，走 format.ts 辅助函数）；生日匹配 SQL 用 `now() AT TIME ZONE 'Asia/Shanghai'`
 
 ### 版本技术栈
 
