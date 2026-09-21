@@ -32,7 +32,8 @@ function literal(val, dataType) {
     case "boolean":
       return val === true ? "true" : "false";
     case "bytea":
-      return `decode('\\x${Buffer.from(val).toString("hex")}','hex')`;
+      // hex 格式要求纯十六进制字符串（\x 转义是 escape 格式，会解析失败）
+      return `decode('${Buffer.from(val).toString("hex")}','hex')`;
     case "jsonb":
     case "json":
       return `'${JSON.stringify(val).replace(/'/g, "''")}'::${dataType === "jsonb" ? "jsonb" : "json"}`;

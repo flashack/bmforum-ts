@@ -157,20 +157,26 @@ function tailLog(file, lines = 15) {
   }
 }
 
-/** 读取种子 SQL（剥离 psql 元命令行） */
-function seedSql() {
-  const seedPath = path.resolve(process.cwd(), 'db/seed.sql');
-  const raw = fs.readFileSync(seedPath, 'utf8');
+/** 读取 SQL 文件（剥离 psql 元命令行） */
+function readSqlFile(relPath) {
+  const raw = fs.readFileSync(path.resolve(process.cwd(), relPath), 'utf8');
   return raw
     .split('\n')
     .filter((line) => !line.startsWith('\\'))
     .join('\n');
 }
 
+/** 读取种子 SQL（剥离 psql 元命令行） */
+function seedSql() {
+  return readSqlFile('db/seed.sql');
+}
+
 async function ensureSchema(client, label) {
   const hasTable = await client.query("SELECT to_regclass('public.userlist') AS t");
   if (!hasTable.rows[0].t) {
-    console.log(`[bmf7-db] ${label} 空库，灌入种子数据 db/seed.sql`);
+    console.log(`[bmf7-db] ${label} 空库，执行 db/schema.sql 建表`);
+    await client.query(readSqlFile('db/schema.sql'));
+    console.log(`[bmf7-db] ${label} 建表完成，灌入种子数据 db/seed.sql`);
     await client.query(seedSql());
     console.log('[bmf7-db] 种子数据完成');
   } else {

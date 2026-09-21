@@ -14,7 +14,7 @@ INSERT INTO public."announces" ("id", "title", "content", "author", "addtime", "
 INSERT INTO public."announces" ("id", "title", "content", "author", "addtime", "url") VALUES (2, '发帖规范提醒', '请勿发布违规内容，尊重他人，维护论坛氛围。BMBCode 语法（[b][i][u][quote][img][url][color]）已支持。', 'admin', 1700100000, '');
 INSERT INTO public."announces" ("id", "title", "content", "author", "addtime", "url") VALUES (3, '标签功能上线', '发帖时可添加标签（Tags），让帖子联系更紧密，这是 BMForum 的招牌功能！', 'admin', 1700200000, '/tags');
 
-INSERT INTO public."attachments" ("id", "tid", "pid", "filename", "mimetype", "size", "uploader", "uploadtime", "downloads", "isavatar", "data") VALUES (3, 0, 0, 'av3.png', 'image/png', 70, 'bsd_fan', 1789912623, 0, 1, decode('\x89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da636460f85f0f0002870180eb47ba920000000049454e44ae426082','hex'));
+INSERT INTO public."attachments" ("id", "tid", "pid", "filename", "mimetype", "size", "uploader", "uploadtime", "downloads", "isavatar", "data") VALUES (3, 0, 0, 'av3.png', 'image/png', 70, 'bsd_fan', 1789912623, 0, 1, decode('89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d4944415478da636460f85f0f0002870180eb47ba920000000049454e44ae426082','hex'));
 
 INSERT INTO public."bbs_config" ("key", "value") VALUES ('short_title', 'BMForum');
 INSERT INTO public."bbs_config" ("key", "value") VALUES ('footer_text', 'Powered by BMForum.com · 本页面为 TypeScript + PostgreSQL 复刻版');
