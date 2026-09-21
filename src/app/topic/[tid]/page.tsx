@@ -275,30 +275,50 @@ export default async function TopicPage({
           return (
             <div key={post.id} className="bmf-post-row">
               <div className="bmf-post-author">
-                <div className="mb-1 font-bold text-[14px]" style={{ color: groupColor(author?.usergroup ?? 1) }}>
-                  {post.username}
-                </div>
-                <div className="mb-1 flex justify-center">
+                {/* 移动端：单行紧凑条（小头像 + 用户名 + 组名），突出正文 */}
+                <div className="flex items-center gap-2 md:hidden">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={avatarUrl(author?.avatar ?? "", post.usrid)}
                     alt={post.username}
-                    width={70}
-                    height={70}
-                    className="border border-[#dddddd]"
+                    width={22}
+                    height={22}
+                    className="h-[22px] w-[22px] flex-shrink-0 border border-[#dddddd] object-cover"
                   />
+                  <b className="truncate text-[13px]" style={{ color: groupColor(author?.usergroup ?? 1) }}>
+                    {post.username}
+                  </b>
+                  <span className="flex-shrink-0 text-[11px] text-[#999]">
+                    {groupName(author?.usergroup ?? 1)}
+                  </span>
                 </div>
-                <div className="mb-1">
-                  <span style={{ color: groupColor(author?.usergroup ?? 1) }}>{groupName(author?.usergroup ?? 1)}</span>
-                  {author?.headtitle ? <span className="ml-1 text-[#999]">· {author.headtitle}</span> : null}
-                </div>
-                <div className="space-y-0.5 text-left text-[11px] text-[#888]">
-                  <div>头衔：{author?.desper || "新手上路"}</div>
-                  <div>积分：{author?.point ?? 0}</div>
-                  <div>帖子：{author?.postamount ?? 0}</div>
-                  <div>金钱：{author?.money ?? 0}</div>
-                  {author?.fromwhere ? <div>来自：{author.fromwhere}</div> : null}
-                  <div>注册：{author?.regdate ? author.regdate.slice(0, 10) : "—"}</div>
+                {/* 桌面：完整作者卡（原版左列） */}
+                <div className="hidden md:block">
+                  <div className="mb-1 font-bold text-[14px]" style={{ color: groupColor(author?.usergroup ?? 1) }}>
+                    {post.username}
+                  </div>
+                  <div className="mb-1 flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={avatarUrl(author?.avatar ?? "", post.usrid)}
+                      alt={post.username}
+                      width={70}
+                      height={70}
+                      className="border border-[#dddddd]"
+                    />
+                  </div>
+                  <div className="mb-1">
+                    <span style={{ color: groupColor(author?.usergroup ?? 1) }}>{groupName(author?.usergroup ?? 1)}</span>
+                    {author?.headtitle ? <span className="ml-1 text-[#999]">· {author.headtitle}</span> : null}
+                  </div>
+                  <div className="space-y-0.5 text-left text-[11px] text-[#888]">
+                    <div>头衔：{author?.desper || "新手上路"}</div>
+                    <div>积分：{author?.point ?? 0}</div>
+                    <div>帖子：{author?.postamount ?? 0}</div>
+                    <div>金钱：{author?.money ?? 0}</div>
+                    {author?.fromwhere ? <div>来自：{author.fromwhere}</div> : null}
+                    <div>注册：{author?.regdate ? author.regdate.slice(0, 10) : "—"}</div>
+                  </div>
                 </div>
               </div>
               <div className="bmf-post-main">
