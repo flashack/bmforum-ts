@@ -3,7 +3,8 @@
  * 生产数据库引导（幂等）。
  *
  * 优先级：
- *  1) 平台注入的 DATABASE_URL 指向远程托管库且可连接 → 直接使用（空库时灌入种子，数据可持久化）
+ *  1) 平台注入的 PGDATABASE_URL（Supabase 托管 PG）或 DATABASE_URL 指向远程托管库且可连接
+ *     → 直接使用（空库时建表灌种子，数据跨部署持久化）
  *  2) 否则启动本机嵌入式 PostgreSQL（npm 分发的 PG 二进制，无外部依赖）：
  *     - 首次启动：initdb 初始化数据目录 → pg_ctl 启动 → 建角色/库 → 空库时灌入 db/seed.sql
  *     - 再次启动：检测端口与数据目录，自动跳过已完成步骤
@@ -171,6 +172,9 @@ function seedSql() {
   return readSqlFile('db/seed.sql');
 }
 
+/** 增量迁移文件（幂等：IF NOT EXISTS / ON CONFLICT DO NOTHING），按文件名序执行 */
+const MIGRATIONS = ['db/migrate2.sql', 'db/migrate3.sql', 'db/migrate4.sql', 'db/migrate5.sql'];
+
 async function ensureSchema(client, label) {
   const hasTable = await client.query("SELECT to_regclass('public.userlist') AS t");
   if (!hasTable.rows[0].t) {
@@ -182,11 +186,20 @@ async function ensureSchema(client, label) {
   } else {
     console.log(`[bmf7-db] ${label} 已初始化，跳过种子数据`);
   }
+  // 幂等增量迁移：无论新旧库每次兜底执行（schema.sql 落后于增量时自动补齐列/表）
+  for (const m of MIGRATIONS) {
+    await client.query(readSqlFile(m));
+  }
 }
 
-/** 路径一：外部托管库（DATABASE_URL 指向远程）——可连接则直接采用并按需灌种子 */
+/** 外部库连接串：平台注入的 PGDATABASE_URL（Supabase 托管 PG）优先，其次 DATABASE_URL */
+function externalDbUrl() {
+  return process.env.PGDATABASE_URL || process.env.DATABASE_URL || '';
+}
+
+/** 路径一：外部托管库（PGDATABASE_URL/DATABASE_URL 指向远程）——可连接则直接采用并按需灌种子 */
 async function tryExternalDb() {
-  const envUrl = process.env.DATABASE_URL;
+  const envUrl = externalDbUrl();
   if (!envUrl) return false;
   let host = '';
   try {
@@ -199,12 +212,20 @@ async function tryExternalDb() {
   try {
     const client = new pg.Client({ connectionString: envUrl, connectionTimeoutMillis: 5000 });
     await client.connect();
-    console.log('[bmf7-db] 外部 DATABASE_URL 可用，采用外部数据库');
+    console.log('[bmf7-db] 外部数据库连接串可用，采用外部数据库（数据持久化）');
     await ensureSchema(client, '外部数据库');
+    // 全站统一东八区：外部库也持久化时区（托管库权限受限时跳过，不影响 format.ts 显式 +8 渲染）
+    try {
+      const dbName = new URL(envUrl).pathname.replace(/^\//, '') || 'postgres';
+      await client.query(`ALTER DATABASE "${dbName}" SET timezone TO 'Asia/Shanghai'`);
+      console.log(`[bmf7-db] 外部数据库 ${dbName} 时区已设为 Asia/Shanghai`);
+    } catch (tzErr) {
+      console.log('[bmf7-db] 外部数据库时区设置跳过（权限受限）:', tzErr?.message || tzErr);
+    }
     await client.end();
     return true;
   } catch (err) {
-    console.log('[bmf7-db] 外部 DATABASE_URL 不可用，回退本机嵌入式实例:', err?.message || err);
+    console.log('[bmf7-db] 外部数据库不可用，回退本机嵌入式实例:', err?.message || err);
     return false;
   }
 }

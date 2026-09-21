@@ -21,7 +21,7 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **所见即所得编辑器（复刻原版 nicEdit panelInstance）**：`src/components/bmf/rich-editor.tsx` + 转换核心 `src/lib/rich-text.ts`；双模式（富文本 contentEditable / BMBCode 源码）工具栏（B/I/U/S/上下标/对齐/列表/缩进/链接/图片/引用/代码/表情/字号/颜色），提交前经 `RichEditorHandle.getBmbcode()` 转回 BMBCode；交易/隐藏类标签在编辑态原样显示；**首帖判定约定 = 该 tid 下 min(posts.id)**（种子/测试数据须保证首帖 id 最小）
 - **首页**：在线列表（whosonline）+ 今日生日块（userlist.birthday 匹配当天 MM-DD，显示 名字(年龄)）
 - **短消息（原版 messenger.php）**：inbox/outbox + action=clear 清空信箱（ClearBoxButton）
-- **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`（嵌入式 PostgreSQL，数据目录 `/tmp/bmf7-pgdata` 可能被系统清理）；结构 `db/schema.sql`（空库自动首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后用 `node scripts/dump-seed.mjs` 重导——环境无 pg_dump，纯 node pg 实现，导出前先清理运行时表 sessions/onlinestat/notification/primsg 测试残留）；`scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底；**空库时自动 schema.sql 建表 → seed.sql 灌数**），dev.sh 与 start.sh 启动时均自动执行（自愈）；**演示账号 admin/bsd_fan/月光骑士/php老兵/水贴之王 密码统一 123456**
+- **数据库**：生产接入 Supabase 托管 PG（平台注入 `PGDATABASE_URL` 环境变量，数据跨部署持久化；开发兜底本地嵌入式 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`，数据目录 `/tmp/bmf7-pgdata`）；结构 `db/schema.sql`（空库自动首建）、增量 `db/migrate*.sql`（幂等，prod-db.mjs 每次启动兜底执行）、种子 `db/seed.sql`（改动表结构/种子数据后用 `node scripts/dump-seed.mjs` 重导——环境无 pg_dump，纯 node pg 实现，导出前先清理运行时表 sessions/onlinestat/notification/primsg 测试残留）；`scripts/prod-db.mjs` 引导（PGDATABASE_URL/DATABASE_URL 远程优先 → 本机嵌入式兜底；**空库时 schema.sql 建表 → migrate 增量 → seed.sql 灌数**），dev.sh 与 start.sh 启动时均自动执行（自愈）；`src/lib/db.ts` 连接池按连接串变化自动重建（HMR 改配置免重启）；**演示账号 admin/bsd_fan/月光骑士/php老兵/水贴之王 密码统一 123456**
 - **会话认证**：cookie `bmf_sid`（sessions 表，`src/lib/auth.ts`）；**cookie 属性按 x-forwarded-proto 动态切换**：https 访问（含 iframe 预览的跨站上下文）用 `SameSite=None; Secure`，http 用 `SameSite=Lax`——否则 iframe 中登录后 cookie 被浏览器阻止，表现为"登录成功但仍是未登录状态"；登录/注册成功后前端用 `window.location.assign("/")` 全量跳转（auth-form.tsx），退出登录 GET /api/auth/logout 返回相对路径 307
 - **时区**：全站统一东八区。三层保障：dev.sh/start.sh `export TZ=Asia/Shanghai`（Node 进程）；prod-db.mjs 建库后 `ALTER DATABASE ... SET timezone TO 'Asia/Shanghai'`；`src/lib/format.ts` fmtTime/fmtDate/fmtFullDate/fmtShortTime/cnYear/cnDayStart 显式 +8 偏移计算（勿在组件里直接用 Date.now/new Date 格式化——ESLint react-hooks/purity 会拦截，走 format.ts 辅助函数）；生日匹配 SQL 用 `now() AT TIME ZONE 'Asia/Shanghai'`
 
@@ -34,22 +34,23 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 3. **环境没有 pg_dump/psql**：embedded-postgres 只带 initdb/pg_ctl/postgres 三个二进制，系统 PATH 里也没有客户端工具。**规范**：种子导出用 `node scripts/dump-seed.mjs`（纯 node pg 实现）；验证性查询用 `node -e` + node_modules/pg。
 4. **种子混入运行时数据**：直接导全库会把 sessions/onlinestat/notification/primsg、测试期间产生的 adminlog 等一起带进种子基线。**规范**：dump-seed.mjs 导出前先清运行时表与测试残留，导出后 grep 各表行数对账。
 5. **/tmp/bmf7-pgdata 会被系统清理**：PG 进程与数据目录随时可能消失，表现为全站 ECONNREFUSED 500。**规范**：不要手动救数据——dev.sh/start.sh 启动时自动跑 prod-db.mjs 自愈（缺失即 initdb+灌种子），重启预览即可恢复。
-6. **重新部署 = 数据重置为种子基线**（用户可感知的数据丢失）：部署容器是全新的，/tmp 内嵌库随容器销毁，prod-db.mjs 空库引导会重建并灌入 seed.sql——用户部署后发的帖/注册的号不会带入下一次部署。**唯一解法**：部署环境注入远程持久化 DATABASE_URL（prod-db.mjs 已支持外部库优先：可连接即采用并自动建表灌种子，之后数据跨部署保留）；在拿到外部库前，不要向用户承诺部署后写入的数据可长期保留。
+6. **重新部署 = 数据重置为种子基线**（已解决）：生产容器数据库曾在 /tmp、随容器销毁导致用户数据丢失。**已接入平台注入的 Supabase 托管 PG（`PGDATABASE_URL`，prod-db.mjs/db.ts 远程优先），数据跨部署持久化**；本机嵌入式仅作兜底（远程库不可达时降级，此时数据仅容器内有效）。排查数据问题时先确认连的是哪个库（走远程时 PGHOST 为 *.pg2.aidap-*.volces.com）。
 7. **psql/node 单条 query 多语句不原子**：多步 DML（如批量 id 重排）中途失败会留下半完成状态，重试还会撞唯一键。**规范**：批量数据变更一律用 node pg 显式事务（BEGIN/COMMIT），出错回滚重跑。
 8. **posts.id 重排**：直接链式 UPDATE 会撞主键冲突，需借助临时偏移（+100000 → 200000+new → new）分步落位；且**首帖判定 = 该 tid 下 min(posts.id)**，任何数据操作必须保证首帖 id 最小。
+9. **schema.sql 落后于增量迁移 → 全新库缺列**：contacts.type 等列是后来经 db/migrate*.sql 增量加的而 schema.sql 未同步，空库引导只跑 schema+seed 时新库缺列，好友接口 500（`column "contacts.type" does not exist`）。**已修复**：prod-db.mjs 的 ensureSchema 每次启动幂等兜底执行全部 migrate。**规范**：新增列时写 migrate 后评估是否同步进 schema.sql；交付前用 information_schema 对新旧库做列级对账（单表 count 对不出来）。
 
 ### 前端 / 规范类
 
-9. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
-10. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
-11. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
-12. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
+10. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
+11. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
+12. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
+13. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
 
 ### 流程类
 
-13. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
-14. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
-15. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
+14. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
+15. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
+16. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
 
 ### 版本技术栈
 

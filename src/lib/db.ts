@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 function pickDbUrl(): string {
+  // 平台注入的 Supabase 托管 PG 连接串优先（数据跨部署持久化），其次 DATABASE_URL
+  if (process.env.PGDATABASE_URL) return process.env.PGDATABASE_URL;
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   // 兜底：读取 .env.local（开发环境）
   try {
@@ -20,6 +22,8 @@ function pickDbUrl(): string {
 declare global {
   // eslint-disable-next-line no-var
   var __bmfPool: pg.Pool | undefined;
+  // eslint-disable-next-line no-var
+  var __bmfPoolUrl: string | undefined;
 }
 
 /** 连接串是否指向本机（生产为嵌入式 PG 实例，未启用 SSL） */
@@ -49,8 +53,10 @@ function sanitizeLocalSsl(raw: string): string {
 const dbUrl = sanitizeLocalSsl(pickDbUrl());
 
 export const pool: pg.Pool =
-  globalThis.__bmfPool ??
-  new pg.Pool({
+  // 连接串变化时重建连接池（HMR 热更配置后无需重启 dev server）
+  globalThis.__bmfPool && globalThis.__bmfPoolUrl === dbUrl
+    ? globalThis.__bmfPool
+    : new pg.Pool({
     connectionString: dbUrl,
     // 本机连接显式关闭 SSL（免疫部署容器的 PGSSLMODE/PGREQUIRESSL 环境变量）；
     // 远程库保留默认（可用 BMF_PG_SSL=1 强制开启并跳过证书校验）。
@@ -66,6 +72,7 @@ export const pool: pg.Pool =
 
 if (process.env.NODE_ENV !== "production") {
   globalThis.__bmfPool = pool;
+  globalThis.__bmfPoolUrl = dbUrl;
 }
 
 export async function query<T extends pg.QueryResultRow = pg.QueryResultRow>(
