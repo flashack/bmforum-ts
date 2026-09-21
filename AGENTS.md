@@ -21,7 +21,7 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 - **所见即所得编辑器（复刻原版 nicEdit panelInstance）**：`src/components/bmf/rich-editor.tsx` + 转换核心 `src/lib/rich-text.ts`；双模式（富文本 contentEditable / BMBCode 源码）工具栏（B/I/U/S/上下标/对齐/列表/缩进/链接/图片/引用/代码/表情/字号/颜色），提交前经 `RichEditorHandle.getBmbcode()` 转回 BMBCode；交易/隐藏类标签在编辑态原样显示；**首帖判定约定 = 该 tid 下 min(posts.id)**（种子/测试数据须保证首帖 id 最小）
 - **首页**：在线列表（whosonline）+ 今日生日块（userlist.birthday 匹配当天 MM-DD，显示 名字(年龄)）
 - **短消息（原版 messenger.php）**：inbox/outbox + action=clear 清空信箱（ClearBoxButton）
-- **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`；结构 `db/schema.sql`（生产首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后需重新 pg_dump 导出）；生产环境由 `scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底）
+- **数据库**：本地 PG `postgres://postgres:bmf7pass@localhost:5432/bmf7`（嵌入式 PostgreSQL，数据目录 `/tmp/bmf7-pgdata` 可能被系统清理）；结构 `db/schema.sql`（生产首建）、增量 `db/migrate*.sql`、种子 `db/seed.sql`（改动表结构/种子数据后用 `node scripts/dump-seed.mjs` 重导——环境无 pg_dump，纯 node pg 实现，导出前先清理运行时表 sessions/onlinestat/notification/primsg 测试残留）；dev.sh 启动时自动执行 `scripts/prod-db.mjs` 引导（PG 缺失时 initdb+启动+空库灌种子，自愈）；生产环境由 `scripts/prod-db.mjs` 引导（远程 DATABASE_URL 优先/本机嵌入式兜底）；**演示账号 admin/bsd_fan/月光骑士/php老兵/水贴之王 密码统一 123456**
 
 ### 版本技术栈
 

@@ -281,6 +281,8 @@ kill_port_if_listening
 bash "${COZE_WORKSPACE_PATH}/scripts/prepare-node-modules.sh" --prefer-frozen-lockfile --prefer-offline --loglevel debug --reporter=append-only
 warn_source_symlinks
 refresh_drive_route_mtimes
+# 引导本地嵌入式 PG（数据目录在 /tmp 可能被清理）：缺失时自动 initdb/启动/灌种子
+node "${COZE_WORKSPACE_PATH}/scripts/prod-db.mjs" || echo "[dev.sh] DB bootstrap failed, continuing..."
 echo "Starting HTTP service on port ${DEPLOY_RUN_PORT} for dev..."
 
 mkdir -p "${LOG_DIR}"
