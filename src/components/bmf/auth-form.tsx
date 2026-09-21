@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const isLogin = mode === "login";
-  const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [mailadd, setMailadd] = useState("");
@@ -55,8 +53,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         if (!isLogin) void loadCaptcha();
         return;
       }
-      router.push("/");
-      router.refresh();
+      // 全量跳转：确保服务端组件按最新 cookie 重新渲染登录态（避免客户端路由缓存）
+      window.location.assign("/");
     } finally {
       setBusy(false);
     }

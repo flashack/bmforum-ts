@@ -19,5 +19,6 @@ export async function GET() {
   } catch {
     /* ignore */
   }
-  return NextResponse.redirect(new URL("/", process.env.COZE_PROJECT_DOMAIN_DEFAULT || "http://localhost:5000"));
+  // 相对路径 Location（RFC 7231 允许），避免依赖请求 Host 或环境域名
+  return new Response(null, { status: 307, headers: { Location: "/" } });
 }

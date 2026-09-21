@@ -81,6 +81,19 @@ export async function clientIp(): Promise<string> {
   return h.get("x-forwarded-for")?.split(",")[0]?.trim() || "127.0.0.1";
 }
 
+/**
+ * Cookie 会话属性：站点可能被嵌入 iframe 预览（跨站上下文），
+ * SameSite=Lax 的 cookie 在第三方 iframe 中会被浏览器阻止保存/发送，
+ * 导致"登录成功但刷新后未登录"。https 访问时改用 SameSite=None; Secure。
+ */
+async function sessionCookieOptions() {
+  const h = await headers();
+  const isHttps = h.get("x-forwarded-proto")?.split(",")[0]?.trim() === "https";
+  return isHttps
+    ? ({ httpOnly: true, sameSite: "none", secure: true, path: "/", maxAge: 60 * 60 * 24 * 14 } as const)
+    : ({ httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 14 } as const);
+}
+
 /** 创建会话并写入 Cookie（仅在 Route Handler 中调用） */
 export async function createSession(userid: number): Promise<string> {
   const sid = randomBytes(24).toString("hex");
@@ -92,12 +105,7 @@ export async function createSession(userid: number): Promise<string> {
     [sid, userid, now, ip]
   );
   const store = await cookies();
-  store.set(SESSION_COOKIE, sid, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 14,
-  });
+  store.set(SESSION_COOKIE, sid, await sessionCookieOptions());
   return sid;
 }
 
