@@ -34,21 +34,22 @@ BMForum 7 论坛系统复刻（对照 assets/BMF7.tar.gz 原始 PHP 源码逐功
 3. **环境没有 pg_dump/psql**：embedded-postgres 只带 initdb/pg_ctl/postgres 三个二进制，系统 PATH 里也没有客户端工具。**规范**：种子导出用 `node scripts/dump-seed.mjs`（纯 node pg 实现）；验证性查询用 `node -e` + node_modules/pg。
 4. **种子混入运行时数据**：直接导全库会把 sessions/onlinestat/notification/primsg、测试期间产生的 adminlog 等一起带进种子基线。**规范**：dump-seed.mjs 导出前先清运行时表与测试残留，导出后 grep 各表行数对账。
 5. **/tmp/bmf7-pgdata 会被系统清理**：PG 进程与数据目录随时可能消失，表现为全站 ECONNREFUSED 500。**规范**：不要手动救数据——dev.sh/start.sh 启动时自动跑 prod-db.mjs 自愈（缺失即 initdb+灌种子），重启预览即可恢复。
-6. **psql/node 单条 query 多语句不原子**：多步 DML（如批量 id 重排）中途失败会留下半完成状态，重试还会撞唯一键。**规范**：批量数据变更一律用 node pg 显式事务（BEGIN/COMMIT），出错回滚重跑。
-7. **posts.id 重排**：直接链式 UPDATE 会撞主键冲突，需借助临时偏移（+100000 → 200000+new → new）分步落位；且**首帖判定 = 该 tid 下 min(posts.id)**，任何数据操作必须保证首帖 id 最小。
+6. **重新部署 = 数据重置为种子基线**（用户可感知的数据丢失）：部署容器是全新的，/tmp 内嵌库随容器销毁，prod-db.mjs 空库引导会重建并灌入 seed.sql——用户部署后发的帖/注册的号不会带入下一次部署。**唯一解法**：部署环境注入远程持久化 DATABASE_URL（prod-db.mjs 已支持外部库优先：可连接即采用并自动建表灌种子，之后数据跨部署保留）；在拿到外部库前，不要向用户承诺部署后写入的数据可长期保留。
+7. **psql/node 单条 query 多语句不原子**：多步 DML（如批量 id 重排）中途失败会留下半完成状态，重试还会撞唯一键。**规范**：批量数据变更一律用 node pg 显式事务（BEGIN/COMMIT），出错回滚重跑。
+8. **posts.id 重排**：直接链式 UPDATE 会撞主键冲突，需借助临时偏移（+100000 → 200000+new → new）分步落位；且**首帖判定 = 该 tid 下 min(posts.id)**，任何数据操作必须保证首帖 id 最小。
 
 ### 前端 / 规范类
 
-8. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
-9. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
-10. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
-11. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
+9. **iframe 预览中登录失效**：站点常被嵌入 iframe（跨站上下文），`SameSite=Lax` 的 cookie 被浏览器阻止，表现为"登录返回成功但刷新后未登录"。**规范**：会话 cookie 按 x-forwarded-proto 动态切换——https 用 `SameSite=None; Secure`（auth.ts sessionCookieOptions），登录/注册成功后用 `window.location.assign("/")` 全量跳转。
+10. **ESLint react-hooks/purity 拦截渲染期不纯调用**：Server Component 里直接写 `Date.now()`/`Math.random()` 会 lint 报错。**规范**：时间/随机相关计算封装进 `src/lib/format.ts` 辅助函数（cnYear/cnDayStart 等）再引用。
+11. **服务器容器时区是 UTC**：任何 `new Date().getHours()`/`toLocaleString()`/`to_char(now())` 都会输出 UTC 时间。**规范**：见上方"时区"条目的三层保障；新增时间显示一律走 format.ts。
+12. **新增 Tailwind 类需重新部署才进生产**：生产 CSS 是 build 产物，本地 dev 可见的 `max-md:hidden` 等新类，生产重新部署前不生效——不要误判为"适配丢失"。
 
 ### 流程类
 
-12. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
-13. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
-14. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
+13. **test_run 的 commands 数组是并行执行**：登录+带 cookie 请求这类顺序依赖的命令，并行跑会拿到未写入的 cookie。**规范**：顺序流程合并为单条命令用 `;` 链接。
+14. **HMR 缓存旧报错**：修完代码后立即测试可能仍报修改前的错误（dev server 未重编译）。**规范**：修复后等编译完成再重试，必要时刷新页面触发重编译。
+15. **改完必须真实验证再交付**：HTTP 200 ≠ 业务成功（要看响应体 ok/data 字段）；"SQL 文件写好了"≠"灌库能成功"。上述两次部署失败都是"看起来对"没实际跑过导致的。
 
 ### 版本技术栈
 
